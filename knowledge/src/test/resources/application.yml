@@ -1,0 +1,29 @@
+# ============ knowledge 模块测试配置 ============
+# 连业务库 xiaomi_agent（schema.sql 已建表）
+
+spring:
+  datasource:
+    url: jdbc:postgresql://192.168.122.128:5432/xiaomi_agent
+    username: root
+    password: root
+    driver-class-name: org.postgresql.Driver
+
+  # DashScope 占位 key（测试不真实调用通义，仅满足 Bean 装配；关键词路不依赖 embedding）
+  ai:
+    dashscope:
+      api-key: sk-test-placeholder-not-real
+    # PgVectorStore：禁用自动建表（避免污染业务库），测试语义路用占位 key 会降级返回空
+    vectorstore:
+      pgvector:
+        initialize-schema: false
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com.xiaomi.shopping.agent.knowledge: debug
+    org.springframework.jdbc: warn
+

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaomi.shopping.agent.knowledge.ingest.mapper.KeywordMapper">
+
+    <!-- 关键词路全文检索：tsv + ts_rank，命中 t_knowledge_chunk -->
+    <resultMap id="ScoredDocMap" type="com.xiaomi.shopping.agent.knowledge.model.ScoredDoc">
+        <id property="id" column="id"/>
+        <result property="content" column="content"/>
+        <result property="title" column="title"/>
+        <result property="specText" column="spec_text"/>
+        <result property="spuId" column="spu_id"/>
+        <result property="kwScore" column="score"/>
+        <result property="simScore" column="sim_score"/>
+        <result property="hitType" column="hit_type" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <select id="fullTextSearch" resultMap="ScoredDocMap">
+        SELECT id,
+               content,
+               title,
+               spec_text,
+               spu_id,
+               ts_rank(tsv, plainto_tsquery('pg_catalog.simple', #{query})) AS score,
+               0.0 AS sim_score,
+               'keyword' AS hit_type
+        FROM t_knowledge_chunk
+        WHERE tsv @@ plainto_tsquery('pg_catalog.simple', #{query})
+          AND enabled = 1
+          AND deleted = 0
+        ORDER BY score DESC
+        LIMIT #{topK}
+    </select>
+
+</mapper>
