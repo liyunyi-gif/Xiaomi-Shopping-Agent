@@ -15,6 +15,8 @@
 - 重检循环状态机控制 —— §5
 - 三层记忆（短期/长期/存档）的落地与长期记忆批量提炼 —— §6
 
+**模块归属**：本 Agent 对应 Maven 模块 `orchestrator`，依赖 `common`。模块依赖、包结构、核心类清单见 §10「模块落地」。多模块总览见 [技术架构.md §8](技术架构.md)。
+
 ---
 
 ## 1. 主 Agent 内部组件总览
@@ -495,7 +497,116 @@ public record ShoppingResponse(
 
 ---
 
-## 10. 待确认技术项
+## 10. 模块落地（orchestrator）
+
+> 对应 [技术架构.md §8](技术架构.md) 多模块工程的 `orchestrator` 模块。依赖 `common`（契约 DTO / 全局配置）。
+
+### 10.1 模块依赖（orchestrator/pom.xml）
+
+```xml
+<dependencies>
+    <!-- 内部模块：契约 DTO / 全局配置 -->
+    <dependency>
+        <groupId>com.xiaomi.shopping</groupId>
+        <artifactId>common</artifactId>
+        <version>${project.version}</version>
+    </dependency>
+
+    <!-- SpringAI-Alibaba：DashScope 模型 + Agent Framework（版本由 parent BOM 管理） -->
+    <dependency>
+        <groupId>com.alibaba.cloud.ai</groupId>
+        <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.alibaba.cloud.ai</groupId>
+        <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+    </dependency>
+
+    <!-- ① 短期记忆 Redis -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+    <!-- ②③ 长期记忆/存档：经 common 间接引 mybatis-plus + postgresql，这里显式声明 -->
+    <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
+```
+
+### 10.2 模块包结构
+
+```
+orchestrator/src/main/java/com/xiaomi/shopping/agent/orchestrator/
+├── chatclient/
+│   ├── OrchestratorChatClientConfig.java   # ChatClient Bean 构建 + Advisor 装配（§2）
+│   └── OrchestratorSystemPrompt.java        # 主 Agent 系统提示词常量
+├── intent/
+│   ├── IntentRecognizer.java               # 意图识别（LLM 分类 + 置信度）（§3）
+│   └── IntentResult.java                   # 意图结果（含 needClarify/shoppingAction）
+├── judge/                                   # ★ 纯自研（架构核心）
+│   ├── QualityJudge.java                   # 质量判断 4 步组合判定（§4.1）
+│   ├── QualityVerdict.java                 # 判定枚举
+│   ├── RetrievalLoop.java                  # 重检循环状态机（§4.2）
+│   └── LoopQueryRewriter.java              # 重检换策略重写（主 Agent 自己的重写能力）
+├── memory/                                  # ★ 三层记忆（§5）
+│   ├── shortterm/
+│   │   ├── RedisChatMemoryRepository.java  # 自研 ChatMemoryRepository（Redis 后端）
+│   │   └── ShortTermMemoryService.java     # ① 短期记忆读写
+│   ├── longterm/
+│   │   ├── LongTermMemoryDistiller.java    # ② 会话结束批量提炼（§5.3）
+│   │   ├── LongTermMemoryService.java      # ② 长期记忆加载/写入/淘汰
+│   │   └── UserLongTermMemory.java         # 实体（对应 t_user_longterm_memory）
+│   ├── archive/
+│   │   ├── MessageArchiver.java            # ③ 存档实时落盘（§5.4）
+│   │   └── TMessage.java                   # 实体（对应 t_message）
+│   └── MemoryLoadService.java              # 加载注入：②长期 + ①最近N轮（§5.5）
+├── dispatch/
+│   ├── KnowledgeClient.java                # 委派 Knowledge（注入意图+问题+快照+实体）
+│   ├── ShoppingClient.java                 # 委派 Shopping（注入意图+槽位+快照）
+│   └── HybridOrchestrator.java             # 混合意图跨节点编排（§7）
+├── entityextract/
+│   └── EntityExtractor.java                # 命中实体抽取（供质量判断）
+└── service/
+    └── OrchestratorService.java            # 主 Agent 核心服务（§8）：意图→委派→判断→循环
+```
+
+### 10.3 核心类清单
+
+| 类 | 职责 | 关键方法 | 对应章节 |
+|---|---|---|---|
+| `OrchestratorChatClientConfig` | 构建 ChatClient、装配 Advisor | `orchestratorChatClient()` | §2 |
+| `IntentRecognizer` | LLM 意图分类 + 置信度 | `recognize(input, snapshot)` | §3 |
+| `QualityJudge` | 三信号 4 步质量判定 | `judge(resp, entities)` | §4.1 |
+| `RetrievalLoop` | 重检循环状态机 | `retrieveWithLoop(q, entities, snap)` | §4.2 |
+| `LongTermMemoryDistiller` | 会话结束批量提炼 | `distillOnSessionEnd(...)` | §5.3 |
+| `MessageArchiver` | 存档实时落盘 | `archive(sessionId, uid, role, content)` | §5.4 |
+| `MemoryLoadService` | 加载注入默认上下文 | `loadForSession(userId)` | §5.5 |
+| `HybridOrchestrator` | 混合意图跨节点编排 | `handleHybrid(...)` | §7 |
+| `OrchestratorService` | 主 Agent 核心入口 | `handle(sessionId, userId, input)` | §8 |
+
+### 10.4 与 common 的契约
+- **依赖 common 提供**：`SessionSnapshot`、`KnowledgeRequest/Response`、`ShoppingRequest/Response`、`ShoppingAction`、`ShoppingStatus`、全局配置（`common/config`）、统一异常。
+- **orchestrator 不依赖** knowledge / shopping 的实现包——仅通过 `KnowledgeClient` / `ShoppingClient` 接口调用（对齐 P5 子节点不直接耦合，bootstrap 装配时注入实现）。
+
+---
+
+## 11. 待确认技术项
 
 - [ ] 意图识别置信度阈值 `CONFIDENCE_THRESHOLD` 具体值。
 - [ ] 质量判断相关度阈值 `RELEVANCE_THRESHOLD` 具体值。

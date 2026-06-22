@@ -21,6 +21,8 @@
 - 加权 rerank 重排序（纯自研打分） —— §5
 - 置信信号生成（相关度分数/命中实体/召回数） —— §6
 
+**模块归属**：本子节点对应 Maven 模块 `knowledge`，依赖 `common`。模块依赖、包结构、核心类清单见 §12「模块落地」。多模块总览见 [技术架构.md §8](技术架构.md)。
+
 ---
 
 ## 1. 检索流水线总览
@@ -408,7 +410,124 @@ public record KnowledgeResponse(
 
 ---
 
-## 11. 待确认技术项
+---
+
+## 12. 模块落地（knowledge）
+
+> 对应 [技术架构.md §8](技术架构.md) 多模块工程的 `knowledge` 模块。依赖 `common`（契约 DTO / 全局配置）。**全自研检索管线**（不依赖框架 RAG Advisor）。
+
+### 12.1 模块依赖（knowledge/pom.xml）
+
+```xml
+<dependencies>
+    <!-- 内部模块：契约 DTO（KnowledgeRequest/Response）、全局配置 -->
+    <dependency>
+        <groupId>com.xiaomi.shopping</groupId>
+        <artifactId>common</artifactId>
+        <version>${project.version}</version>
+    </dependency>
+
+    <!-- 语义路：Spring AI pgvector VectorStore（版本由 parent BOM 管理） -->
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
+    </dependency>
+    <!-- embedding 模型：DashScope（与 orchestrator 共用，也可经 SAA starter 引入） -->
+    <dependency>
+        <groupId>com.alibaba.cloud.ai</groupId>
+        <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+    </dependency>
+
+    <!-- 关键词路：MyBatis 原生 SQL（全文检索 ts_rank） -->
+    <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.pgvector</groupId>
+        <artifactId>pgvector</artifactId>
+    </dependency>
+
+    <!-- 知识库构建：Tika 文档解析 -->
+    <dependency>
+        <groupId>org.apache.tika</groupId>
+        <artifactId>tika-core</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.tika</groupId>
+        <artifactId>tika-parsers-standard-package</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
+```
+
+> 关键：本模块**不引 spring-ai-rag / QuestionAnswerAdvisor**——双路召回 + rerank 全自研（见 §4-§5）。仅用 Spring AI 的 `VectorStore`（语义路底层）+ `EmbeddingModel`（向量化）。
+
+### 12.2 模块包结构
+
+```
+knowledge/src/main/java/com/xiaomi/shopping/agent/knowledge/
+├── ingest/                                  # 知识库构建（§2）
+│   ├── KnowledgeIngestService.java          # Tika 解析 → 切片 → embedding → 入库
+│   ├── ChunkSplitter.java                   # 切片（按段落 + token 上限 + 重叠）
+│   ├── mapper/
+│   │   ├── KnowledgeChunkMapper.java        # 写 t_knowledge_chunk（文本/title/spec_text）
+│   │   └── KeywordMapper.java               # 关键词路全文检索 SQL（§4.2）
+│   └── entity/
+│       └── KnowledgeChunk.java              # 实体（对应 t_knowledge_chunk）
+├── rewrite/                                 # 查询重写（§3）
+│   ├── QueryRewriter.java                   # 指代消解/补全/术语规范化（LLM）
+│   └── SubQuestionSplitter.java             # 子问题拆分（LLM）
+├── recall/                                  # ★ 双路召回（§4）
+│   ├── semantic/
+│   │   └── SemanticRecaller.java            # 语义路（PgVectorStore + HNSW）（§4.1）
+│   ├── keyword/
+│   │   └── KeywordRecaller.java             # 关键词路（tsvector + ts_rank）（§4.2）
+│   └── DualChannelRecaller.java             # 并行编排（CompletableFuture）（§4.3）
+├── rerank/                                  # ★ 加权 rerank（§5）
+│   ├── WeightedReranker.java                # 相似度+关键词+字段加权打分
+│   └── RerankWeights.java                   # 权重常量（w_sem/w_kw/w_field）
+├── signal/                                  # 置信信号（§6）
+│   └── ConfidenceSignalBuilder.java         # 生成三信号（分数/命中实体/召回数）
+├── entityextract/                           # 命中实体提取（§7）
+│   └── EntityExtractor.java                 # 抽取型号/参数实体
+├── model/
+│   ├── ScoredDoc.java                       # 召回文档（含 simScore/kwScore/title/specText/content）
+│   └── KnowledgeContext.java                # 拼装的检索上下文
+└── service/
+    └── KnowledgeService.java                # 子节点入口（§8）：重写→召回→rerank→信号
+```
+
+### 12.3 核心类清单
+
+| 类 | 职责 | 关键方法 | 对应章节 |
+|---|---|---|---|
+| `KnowledgeIngestService` | Tika 解析+切片+入库 | `ingest(doc, skuId, title, spec, meta)` | §2 |
+| `QueryRewriter` | 查询重写（受限智能） | `rewrite(question, snapshot)` | §3 |
+| `SemanticRecaller` | 语义路召回 | `recall(query, topK)` | §4.1 |
+| `KeywordRecaller` | 关键词路召回 | `recall(query, topK)` | §4.2 |
+| `DualChannelRecaller` | 双路并行编排 | `recallParallel(query, topK)` | §4.3 |
+| `WeightedReranker` | 加权重排序 | `rerank(merged, query)` | §5 |
+| `ConfidenceSignalBuilder` | 生成三信号 | `build(reranked, entities)` | §6 |
+| `EntityExtractor` | 实体抽取 | `extract(query)` | §7 |
+| `KnowledgeService` | 子节点入口（无状态） | `ask(question, snapshot, queryEntities)` | §8 |
+
+### 12.4 与 common 的契约
+- **依赖 common 提供**：`KnowledgeRequest` / `KnowledgeResponse`（三信号）、`SessionSnapshot`、`DocChunk`、全局配置。
+- **knowledge 不依赖** orchestrator / shopping——它是无状态子节点，由 bootstrap 装配 `KnowledgeService` Bean，orchestrator 经 `KnowledgeClient` 接口调用（对齐 P5）。
+
+---
+
+## 13. 待确认技术项
 
 - [ ] embedding 维度（决定 `VECTOR(N)`）。
 - [ ] rerank 权重 `w_sem/w_kw/w_field` 实测标定。

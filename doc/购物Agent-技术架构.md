@@ -18,6 +18,8 @@
 
 **定位**：Shopping 是「纯能力层」——主 Agent 说"加购小米14"，Shopping 编排对应 MCP 工具执行。**它薄，但它该薄。**
 
+**模块归属**：本子节点对应 Maven 模块 `shopping`（MCP Client 端），依赖 `common`。外部服务封装在独立的 `mcpserver` 模块（MCP Server 端）。模块依赖、包结构、核心类清单见 §10「模块落地」。多模块总览见 [技术架构.md §8](技术架构.md)。
+
 ---
 
 ## 1. 技术架构总览
@@ -321,9 +323,132 @@ public class MockExternalCartClient implements ExternalCartClient {
 
 ---
 
-## 9. 待确认技术项
+## 10. 模块落地（shopping + mcpserver）
+
+> 对应 [技术架构.md §8](技术架构.md) 多模块工程的 `shopping`（MCP Client 端）与 `mcpserver`（MCP Server 端，独立进程）。`shopping` 依赖 `common`。
+
+### 10.1 模块依赖
+
+**shopping/pom.xml（MCP Client 端）：**
+
+```xml
+<dependencies>
+    <!-- 内部模块：契约 DTO -->
+    <dependency>
+        <groupId>com.xiaomi.shopping</groupId>
+        <artifactId>common</artifactId>
+        <version>${project.version}</version>
+    </dependency>
+
+    <!-- MCP Client：经 ToolCallbackProvider 接入 MCP Server（版本由 parent BOM 管理） -->
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-starter-mcp-client</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
+```
+
+**mcpserver/pom.xml（MCP Server 端，独立进程，可选）：**
+
+```xml
+<dependencies>
+    <!-- MCP Server：对外暴露工具（WebMVC 传输） -->
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+    </dependency>
+
+    <!-- 操作购物业务表（经 common 间接，这里显式声明） -->
+    <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
+```
+
+> demo 阶段 mcpserver 可选：若外部服务用 Mock，可在 shopping 模块内本地实现工具（不经 MCP），仅当真要演练 MCP 协议时才拆独立 mcpserver 进程。
+
+### 10.2 模块包结构
+
+**shopping（MCP Client 端）：**
+
+```
+shopping/src/main/java/com/xiaomi/shopping/agent/shopping/
+├── mcpclient/
+│   ├── McpClientConfig.java                 # MCP Client 配置 + ToolCallbackProvider 装配（§4）
+│   └── ToolInvoker.java                     # 按工具名经 MCP 协议调用（封装 ToolCallbackProvider）
+├── orchestration/                           # 确定性工具编排（§5）
+│   └── ShoppingOrchestrator.java            # 按 ShoppingAction 选工具、拼参数、调 ToolInvoker
+├── model/
+│   ├── ToolResult.java                      # 工具统一返回（success/failed/needClarify）
+│   └── ShoppingResponse.java                # 状态信号返回主 Agent（§6）
+└── service/
+    └── ShoppingService.java                 # 子节点入口（§5）：invoke(intent, snapshot)
+```
+
+**mcpserver（MCP Server 端，独立进程）：**
+
+```
+mcpserver/src/main/java/com/xiaomi/shopping/agent/mcpserver/
+├── cart/
+│   └── CartTools.java                       # add_to_cart 工具（@McpTool，操作 t_cart_item）（§3）
+├── order/
+│   └── OrderTools.java                      # place_order 工具（操作 t_order）
+├── logistics/
+│   └── LogisticsTools.java                  # query_logistics 工具（读 t_order.logistics_no）
+├── promotion/
+│   ├── StockTools.java                      # query_stock（读 t_product_sku.stock）
+│   └── PromotionTools.java                  # query_promotion（促销表，待扩展）
+├── external/
+│   ├── ExternalCartClient.java              # 对接真实外部加购接口（接口）
+│   └── MockExternalCartClient.java          # Mock 实现（读 t_product_sku.stock）（§8）
+└── Application.java                         # MCP Server 独立启动类
+```
+
+### 10.3 核心类清单（shopping）
+
+| 类 | 职责 | 关键方法 | 对应章节 |
+|---|---|---|---|
+| `McpClientConfig` | MCP Client 配置、Provider 装配 | `mcpToolProvider()` | §4 |
+| `ToolInvoker` | 按名经 MCP 调用工具 | `invoke(provider, toolName, args)` | §5 |
+| `ShoppingOrchestrator` | 确定性工具编排 | `orchestrate(action, slots, snap)` | §5 |
+| `ShoppingService` | 子节点入口（无状态） | `invoke(intent, snapshot)` | §5 |
+| `ToolResult` / `ShoppingResponse` | 状态信号 | — | §6 |
+
+### 10.4 与 common 的契约
+- **依赖 common 提供**：`ShoppingRequest` / `ShoppingResponse`、`ShoppingAction` / `ShoppingStatus`、`SessionSnapshot`（取购物车项）。
+- **shopping 不依赖** orchestrator / knowledge——它是无状态子节点，由 bootstrap 装配 `ShoppingService` Bean，orchestrator 经 `ShoppingClient` 接口调用。
+- **shopping 与 mcpserver 的关系**：经 MCP 协议通信（非 Java 包依赖），对齐 P5 能力正交。
+
+---
+
+## 11. 待确认技术项
 
 - [ ] MCP 传输方式：stdio / SSE / HTTP，demo 阶段建议 stdio（最简单）。
 - [ ] 外部业务接口清单与真实/Mock 边界。
-- [ ] 工具入参 schema 的细化（`@Tool` 详细参数描述）。
+- [ ] 工具入参 schema 的细化（`@McpToolParam` 详细参数描述）。
 - [ ] Shopping 工具编排是否需要支持多步组合（如"加购并下单"），还是纯单步由主 Agent 串联（当前设计：主 Agent 串联，Shopping 单步）。
