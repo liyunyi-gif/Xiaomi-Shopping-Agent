@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- common：跨节点公共契约 DTO / 全局配置 / 工具类 / 统一异常 -->
+    <!-- common：跨节点公共契约 DTO / 实体类 / 全局配置 / 工具类 / 统一异常 -->
     <parent>
         <groupId>com.xiaomi.shopping</groupId>
         <artifactId>xiaomi-shopping-agent</artifactId>
@@ -13,7 +13,7 @@
 
     <artifactId>common</artifactId>
     <name>common</name>
-    <description>公共模块：跨节点契约 DTO、全局配置、工具类、统一异常</description>
+    <description>公共模块：实体类、跨节点契约 DTO、全局配置、工具类、统一异常</description>
 
     <dependencies>
         <!-- Spring Boot 基础（配置/Bean/校验注解） -->
@@ -26,11 +26,47 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- MyBatis-Plus（实体注解 + TypeHandler + 分页） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <!-- 分页插件 PaginationInnerInterceptor 自 v3.5.9 起分离，需单独引入 jsqlparser 模块 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL JDBC 驱动 -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+
+        <!-- pgvector-java 类型支持（向量读写） -->
+        <dependency>
+            <groupId>com.pgvector</groupId>
+            <artifactId>pgvector</artifactId>
+        </dependency>
+
+        <!-- Redis（短期记忆 + 连接测试） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- Lombok（版本由 Spring Boot BOM 管理） -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <!-- 测试 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

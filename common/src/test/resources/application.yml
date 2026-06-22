@@ -1,0 +1,28 @@
+# ============ common 模块测试配置 ============
+# 连接本地 Docker 服务：pgsql+pgvector / redis
+# 账号密码均为 root，redis 无密码
+
+spring:
+  # ---------- PostgreSQL（连接验证先连默认 postgres 库） ----------
+  datasource:
+    url: jdbc:postgresql://192.168.122.128:5432/postgres
+    username: root
+    password: root
+    driver-class-name: org.postgresql.Driver
+
+  # ---------- Redis ----------
+  data:
+    redis:
+      host: 192.168.122.128
+      port: 6379
+      timeout: 3s
+
+# MyBatis-Plus 测试用最小配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    org.springframework.jdbc: debug
+    com.xiaomi.shopping.agent: debug
