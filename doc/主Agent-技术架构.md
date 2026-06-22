@@ -23,7 +23,7 @@
 
 ```mermaid
 graph TD
-    IN["用户输入 / 会话打开"] --> CC["ChatClient (SpringAI-Alibaba)<br/>通义 DashScope"]
+    IN["用户输入 / 会话打开"] --> CC["ChatClient (Spring AI)<br/>OpenAI 协议接百炼 qwen-plus"]
 
     subgraph Advisor链["Advisor 链（承载主 Agent 职责）"]
         MEM_A["记忆 Advisor<br/>加载①短期+②长期, 组装上下文"]
@@ -48,22 +48,29 @@ graph TD
 
 ---
 
-## 2. ChatClient 构建（SpringAI-Alibaba）
+## 2. ChatClient 构建（Spring AI OpenAI 协议接百炼）
 
 ```java
 @Configuration
 public class OrchestratorChatClientConfig {
 
+    // Chat 模型 Bean：OpenAI 协议手动声明，接阿里云百炼（关闭 starter 默认自动装配避免与 embedding 端点冲突）
     @Bean
-    public DashScopeChatModel dashScopeChatModel() {
-        DashScopeApi api = DashScopeApi.builder()
-                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+    public OpenAiChatModel orchestratorChatModel() {
+        OpenAiApi api = OpenAiApi.builder()
+                .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
+                .apiKey(System.getenv("DASHSCOPE_API_KEY"))
                 .build();
-        return DashScopeChatModel.builder().dashScopeApi(api).build();
+        return OpenAiChatModel.builder()
+                .openAiApi(api)
+                .defaultOptions(OpenAiChatOptions.builder()
+                        .model("qwen-plus-2025-07-28")
+                        .build())
+                .build();
     }
 
     @Bean
-    public ChatClient orchestratorChatClient(DashScopeChatModel model,
+    public ChatClient orchestratorChatClient(OpenAiChatModel model,
                                              ChatMemory chatMemory) {
         return ChatClient.builder(model)
                 .defaultSystem("""
@@ -82,6 +89,7 @@ public class OrchestratorChatClientConfig {
 - `defaultSystem`：设定主 Agent 人设（导购助手）与「不编造、不足则澄清」的约束。
 - `MessageChatMemoryAdvisor`：承载短期记忆（①）注入，后端接 Redis（见 §5）。
 - 意图识别、质量判断不在 Advisor 内，由独立服务驱动（见 §4、§5）。
+- **模型来源**：阿里云百炼 qwen-plus-2025-07-28，经 OpenAI 兼容模式接入（base-url 指百炼 endpoint）。
 
 ---
 
@@ -512,14 +520,15 @@ public record ShoppingResponse(
         <version>${project.version}</version>
     </dependency>
 
-    <!-- SpringAI-Alibaba：DashScope 模型 + Agent Framework（版本由 parent BOM 管理） -->
+    <!-- Spring AI：OpenAI 协议手动 Bean 接百炼 qwen-plus（版本由 parent BOM 管理） -->
     <dependency>
-        <groupId>com.alibaba.cloud.ai</groupId>
-        <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-openai</artifactId>
     </dependency>
+    <!-- 关闭 starter 默认装配后，ChatClient/ChatMemory 所需基础由 spring-ai-client 提供 -->
     <dependency>
-        <groupId>com.alibaba.cloud.ai</groupId>
-        <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-client-chat</artifactId>
     </dependency>
 
     <!-- ① 短期记忆 Redis -->

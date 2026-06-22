@@ -116,7 +116,7 @@ public class CartTools {
 
 ---
 
-## 4. MCP Client 接入（SpringAI-Alibaba）
+## 4. MCP Client 接入（Spring AI）
 
 ### 配置（application.yml）
 
@@ -141,24 +141,22 @@ spring:
 }
 ```
 
-### Java 注入（官方模式）
+### Java 注入（Spring AI 模式）
 
 ```java
 @Configuration
 public class McpClientConfig {
 
-    // SpringAI-Alibaba 自动装配 ToolCallbackProvider（来自 MCP Server）
+    // Spring AI 自动装配 ToolCallbackProvider（来自 MCP Server）
+    // 注：Shopping 是纯能力网关，确定性工具编排，不经 LLM；ToolCallbackProvider 直接供编排器调用。
     @Bean
-    public ChatClient shoppingChatClient(DashScopeChatModel model,
-                                         ToolCallbackProvider mcpToolProvider) {
-        return ChatClient.builder(model)
-                .defaultToolCallbacks(mcpToolProvider)
-                .build();
+    public ToolCallbackProvider shoppingMcpTools(SyncMcpToolCallbackProvider provider) {
+        return provider;
     }
 }
 ```
 
-> 也可用 `SyncMcpToolCallbackProvider(mcpClient...)` 显式装配多个 MCP Client。
+> Shopping 子节点用 `ToolCallbackProvider` 调用 MCP 工具，按主 Agent 指令做确定性编排（不引入 ChatClient/LLM，对齐 P5 纯能力网关）。也可用 `SyncMcpToolCallbackProvider(mcpClient...)` 显式装配多个 MCP Client。
 > `ToolCallbackProvider` / `SyncMcpToolCallbackProvider` 是 Spring AI（spring-ai-core / spring-ai-mcp）的标准类，Spring AI Alibaba 兼容使用，非 Alibaba 专属。
 
 ---

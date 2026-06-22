@@ -74,7 +74,7 @@ graph LR
 @Service
 public class KnowledgeIngestService {
 
-    private final EmbeddingModel embeddingModel;   // 通义 Embedding
+    private final EmbeddingModel embeddingModel;   // OpenAI 协议接硅基流动 Qwen3-Embedding-8B(1024维)
     private final VectorStore vectorStore;          // PgVectorStore → 写 t_knowledge_vector
     private final KnowledgeChunkMapper chunkMapper; // MyBatis → 写 t_knowledge_chunk
     private final TikaParser tika;
@@ -87,7 +87,7 @@ public class KnowledgeIngestService {
             // ① 文本/标题/规格写入 t_knowledge_chunk（tsv 由触发器自动维护，供关键词路 + rerank 加权）
             long chunkId = chunkMapper.insert(new KnowledgeChunk(skuId, chunk, title, specText));
 
-            // ② 向量写入 t_knowledge_vector（VectorStore 内部调 embedding 后落库，chunk_id 回链）
+            // ② 向量写入 t_knowledge_vector（VectorStore 内部调 embedding(硅基流动) 后落库，chunk_id 回链）
             Document d = new Document(chunk, Map.of("chunk_id", chunkId, "sku_id", skuId, "meta", meta));
             vectorStore.add(List.of(d));
         }
@@ -226,13 +226,52 @@ public class DualChannelRecaller {
 
 ---
 
-## 5. 加权 Rerank（纯自研 ★）
+## 5. 加权 Rerank（★ 简历重点）
 
-### 方案选择
-- 方案 A：调外部 rerank 模型（通义/其他 API）——准但依赖外部、有成本。
-- 方案 B：**自写加权打分**——小数据量 500 SKU 性价比高，体现自研，**推荐**。
+### 5.1 方案：外部 Rerank 模型主用 + 自研加权降级
 
-### 加权打分公式
+- **主用方案 A：外部 Qwen3-Reranker-8B（硅基流动）**——cross-encoder 重排序模型，精度高。经 `/v1/rerank` 接入。
+- **降级方案 B：自研加权打分**——外部 rerank 不可用（限流/超时/key 缺失）时自动降级，保证可用性。小数据量下加权打分亦有不错效果。
+- **策略**：`Reranker` 门面统一入口，优先调外部模型；失败/降级开关打开时回退到 `WeightedReranker`（纯自研）。两者均产出 `finalScore`，下游无感。
+
+> 设计意图：外部模型求精度，自研加权保兜底 + 体现工程完整度。简历可写「双 rerank 策略（cross-encoder 主用 + 自研加权降级）」。
+
+### 5.2 外部 Rerank 客户端（硅基流动 /v1/rerank）
+
+Spring AI 无 rerank 抽象，自研 WebClient 客户端：
+
+```java
+@Component
+public class QwenRerankClient {
+    private final WebClient webClient;   // baseUrl = https://api.siliconflow.cn/v1
+
+    public List<ScoredDoc> rerank(String query, List<ScoredDoc> candidates, int topN) {
+        RerankResponse resp = webClient.post()
+                .uri("/rerank")
+                .header("Authorization", "Bearer " + System.getenv("SILICONFLOW_API_KEY"))
+                .bodyValue(new RerankRequest("Qwen/Qwen3-Reranker-8B", query,
+                        candidates.stream().map(ScoredDoc::getContent).toList(),
+                        topN, false))
+                .retrieve()
+                .bodyToMono(RerankResponse.class)
+                .block();
+        // resp.results: [{index, relevance_score}]，按 relevance_score 降序映射回 ScoredDoc
+        return mapToScoredDocs(candidates, resp.getResults());
+    }
+}
+
+record RerankRequest(String model, String query, List<String> documents,
+                     int top_n, boolean return_text) {}
+record RerankResponse(List<Result> results) {
+    record Result(int index, double relevance_score) {}
+}
+```
+
+> 关键字段：`relevance_score`（0~1）即 cross-encoder 打分，直接作为 `finalScore`。
+
+### 5.3 自研加权打分（降级方案 B）
+
+降级时的加权公式：
 
 ```
 finalScore = w_sem * simScore          // 语义相似度(归一化0~1)
@@ -240,7 +279,7 @@ finalScore = w_sem * simScore          // 语义相似度(归一化0~1)
            + w_field * fieldBoost      // 字段权重(标题命中>正文命中)
 ```
 
-建议起点权重：`w_sem=0.5, w_kw=0.3, w_field=0.2`，待实测标定。
+起点权重：`w_sem=0.5, w_kw=0.3, w_field=0.2`。
 
 ```java
 @Service
@@ -265,7 +304,6 @@ public class WeightedReranker {
 
     // 字段命中权重：直接取 t_knowledge_chunk 的独立列 title / spec_text
     private double computeFieldBoost(ScoredDoc d, List<String> terms) {
-        // title/spec_text 是 t_knowledge_chunk 的独立列（见数据库设计.md §3.4），非 metadata
         String title = d.getTitle();       // chunk.title 列
         String spec  = d.getSpecText();    // chunk.spec_text 列
         double boost = 0;
@@ -432,10 +470,15 @@ public record KnowledgeResponse(
         <groupId>org.springframework.ai</groupId>
         <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
     </dependency>
-    <!-- embedding 模型：DashScope（与 orchestrator 共用，也可经 SAA starter 引入） -->
+    <!-- embedding：OpenAI 协议手动 Bean 接硅基流动 Qwen3-Embedding-8B（不用 starter 自动装配，避免与 chat 端点冲突） -->
     <dependency>
-        <groupId>com.alibaba.cloud.ai</groupId>
-        <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-openai</artifactId>
+    </dependency>
+    <!-- rerank：自研 WebClient 客户端调硅基流动 /v1/rerank -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-webflux</artifactId>
     </dependency>
 
     <!-- 关键词路：MyBatis 原生 SQL（全文检索 ts_rank） -->
@@ -470,7 +513,9 @@ public record KnowledgeResponse(
 </dependencies>
 ```
 
-> 关键：本模块**不引 spring-ai-rag / QuestionAnswerAdvisor**——双路召回 + rerank 全自研（见 §4-§5）。仅用 Spring AI 的 `VectorStore`（语义路底层）+ `EmbeddingModel`（向量化）。
+> 关键：本模块**不引 spring-ai-rag / QuestionAnswerAdvisor**——双路召回 + rerank 全自研编排（见 §4-§5）。仅用 Spring AI 的 `VectorStore`（语义路底层）+ `EmbeddingModel`（向量化，OpenAI 协议手动 Bean）+ 自研 WebClient（rerank 客户端）。
+>
+> **embedding 端点**：硅基流动（与 chat 端点不同 base-url），需手动 `OpenAiEmbeddingModel` Bean，关闭 `OpenAiEmbeddingAutoConfiguration`。
 
 ### 12.2 模块包结构
 
@@ -493,8 +538,10 @@ knowledge/src/main/java/com/xiaomi/shopping/agent/knowledge/
 │   ├── keyword/
 │   │   └── KeywordRecaller.java             # 关键词路（tsvector + ts_rank）（§4.2）
 │   └── DualChannelRecaller.java             # 并行编排（CompletableFuture）（§4.3）
-├── rerank/                                  # ★ 加权 rerank（§5）
-│   ├── WeightedReranker.java                # 相似度+关键词+字段加权打分
+├── rerank/                                  # ★ rerank（§5）
+│   ├── Reranker.java                        # 门面：外部模型主用 + 自研加权降级
+│   ├── QwenRerankClient.java                # 外部 Qwen3-Reranker-8B（硅基流动 /v1/rerank）
+│   ├── WeightedReranker.java                # 自研加权打分（降级方案 B）
 │   └── RerankWeights.java                   # 权重常量（w_sem/w_kw/w_field）
 ├── signal/                                  # 置信信号（§6）
 │   └── ConfidenceSignalBuilder.java         # 生成三信号（分数/命中实体/召回数）
@@ -516,7 +563,9 @@ knowledge/src/main/java/com/xiaomi/shopping/agent/knowledge/
 | `SemanticRecaller` | 语义路召回 | `recall(query, topK)` | §4.1 |
 | `KeywordRecaller` | 关键词路召回 | `recall(query, topK)` | §4.2 |
 | `DualChannelRecaller` | 双路并行编排 | `recallParallel(query, topK)` | §4.3 |
-| `WeightedReranker` | 加权重排序 | `rerank(merged, query)` | §5 |
+| `WeightedReranker` | 自研加权重排序（降级） | `rerank(merged, query)` | §5.3 |
+| `QwenRerankClient` | 外部 rerank 客户端（硅基流动） | `rerank(query, candidates, topN)` | §5.2 |
+| `Reranker` | 门面：外部主用+自研降级 | `rerank(merged, query)` | §5.1 |
 | `ConfidenceSignalBuilder` | 生成三信号 | `build(reranked, entities)` | §6 |
 | `EntityExtractor` | 实体抽取 | `extract(query)` | §7 |
 | `KnowledgeService` | 子节点入口（无状态） | `ask(question, snapshot, queryEntities)` | §8 |
