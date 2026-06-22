@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ============================================================ -->
+    <!-- 小米商城智能导购 Agent · Parent POM                            -->
+    <!-- 职责：版本属性锁定 + BOM 统一管理 + 子模块声明                  -->
+    <!-- 版本对齐铁律：JDK17 / SpringBoot3.4.5 / SpringAI1.1.2 / SAA1.1.2.2 -->
+    <!-- ============================================================ -->
+    <groupId>com.xiaomi.shopping</groupId>
+    <artifactId>xiaomi-shopping-agent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>xiaomi-shopping-agent</name>
+    <description>小米商城智能导购 Agent - 三节点架构(主Agent + Knowledge/Shopping 能力子节点)</description>
+
+    <!-- 子模块：三节点互不依赖(P5 能力正交)，bootstrap 聚合启动，mcpserver 独立进程 -->
+    <modules>
+        <module>common</module>
+        <module>orchestrator</module>
+        <module>knowledge</module>
+        <module>shopping</module>
+        <module>bootstrap</module>
+        <module>mcpserver</module>
+    </modules>
+
+    <properties>
+        <!-- JDK 硬约束（用户指定） -->
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- 框架版本（三者必须成套对齐） -->
+        <spring-boot.version>3.4.5</spring-boot.version>
+        <spring-ai.version>1.1.2</spring-ai.version>
+        <spring-ai-alibaba.version>1.1.2.2</spring-ai-alibaba.version>
+
+        <!-- 中间件/库版本（BOM 未覆盖，需手动锁） -->
+        <mybatis-plus.version>3.5.12</mybatis-plus.version>
+        <postgresql.version>42.7.4</postgresql.version>
+        <pgvector-java.version>0.1.6</pgvector-java.version>
+        <tika.version>2.9.2</tika.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Boot BOM（主基座，锁 3.4.5） -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring AI BOM（与 SAA 对齐 1.1.2） -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- SpringAI-Alibaba BOM（主框架 1.1.2.2） -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- SpringAI-Alibaba Extensions BOM -->
+            <!-- SAA 1.1.2.2 将 starter-dashscope / agent-framework 等置于 extensions，
+                 BOM import 不传递，须在此显式 import，否则 starter 缺版本号 -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-extensions-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- ===== 内部模块（版本统一由 parent 管） ===== -->
+            <dependency>
+                <groupId>com.xiaomi.shopping</groupId>
+                <artifactId>common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.xiaomi.shopping</groupId>
+                <artifactId>orchestrator</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.xiaomi.shopping</groupId>
+                <artifactId>knowledge</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.xiaomi.shopping</groupId>
+                <artifactId>shopping</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- ===== BOM 未覆盖的第三方库（手动锁版本） ===== -->
+            <!-- MyBatis-Plus（Boot3 专用 starter） -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!-- PostgreSQL JDBC 驱动 -->
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
+            <!-- pgvector-java 类型支持 -->
+            <dependency>
+                <groupId>com.pgvector</groupId>
+                <artifactId>pgvector</artifactId>
+                <version>${pgvector-java.version}</version>
+            </dependency>
+            <!-- Apache Tika 文档解析 -->
+            <dependency>
+                <groupId>org.apache.tika</groupId>
+                <artifactId>tika-core</artifactId>
+                <version>${tika.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tika</groupId>
+                <artifactId>tika-parsers-standard-package</artifactId>
+                <version>${tika.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- 仓库：阿里云镜像加速 + Spring Milestones（SAA 历史里程碑备用） -->
+    <repositories>
+        <repository>
+            <id>aliyun-public</id>
+            <url>https://maven.aliyun.com/repository/public</url>
+        </repository>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <release>${java.version}</release>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

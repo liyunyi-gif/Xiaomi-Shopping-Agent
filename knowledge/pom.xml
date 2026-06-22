@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- knowledge：Knowledge 子节点（全自研检索管线） -->
+    <parent>
+        <groupId>com.xiaomi.shopping</groupId>
+        <artifactId>xiaomi-shopping-agent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>knowledge</artifactId>
+    <name>knowledge</name>
+    <description>Knowledge 子节点：知识库构建(Tika)、查询重写、双路召回、加权 rerank、置信信号</description>
+
+    <dependencies>
+        <!-- 内部契约 -->
+        <dependency>
+            <groupId>com.xiaomi.shopping</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+
+        <!-- 语义路：Spring AI pgvector 向量存储（artifactId 经 Context7 核实，1.1.2 新命名规则） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
+        </dependency>
+
+        <!-- 关键词路 + 元数据访问：MyBatis-Plus（支持原生 SQL，ts_rank 全文检索） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+        <!-- pgvector-java 类型支持 -->
+        <dependency>
+            <groupId>com.pgvector</groupId>
+            <artifactId>pgvector</artifactId>
+        </dependency>
+
+        <!-- 知识库构建：Apache Tika 文档解析（PDF/Word/HTML） -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-parsers-standard-package</artifactId>
+        </dependency>
+
+        <!-- 查询重写/Embedding 用通义模型，复用 SAA DashScope -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -1,0 +1,29 @@
+# ============ MCP Server 独立进程配置 ============
+# 外部业务服务封装为 MCP 工具，供 Shopping 子节点经 SSE 远程调用
+
+server:
+  port: 8090
+
+spring:
+  application:
+    name: xiaomi-mcp-server
+
+  ai:
+    mcp:
+      server:
+        name: xiaomi-shopping-mcp-server
+        version: 1.0.0
+        type: SYNC
+        instructions: "小米商城外部业务工具：加购/下单/物流/库存/优惠"
+        capabilities:
+          tool: true
+          resource: true
+          prompt: false
+          completion: false
+        # SSE 传输
+        sse-message-endpoint: /mcp/messages
+        keep-alive-interval: 30s
+
+logging:
+  level:
+    com.xiaomi.shopping.agent: debug

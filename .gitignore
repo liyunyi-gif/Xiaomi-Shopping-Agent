@@ -1,23 +1,49 @@
-### AL ###
-#Template for AL projects for Dynamics 365 Business Central
-#launch.json folder
+### Java / Maven ###
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+### Maven ###
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+### IDE ###
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+# VS Code
 .vscode/
-#Cache folder
-.alcache/
-#Symbols folder
-.alpackages/
-#Snapshots folder
-.snapshots/
-#Testing Output folder
+.factorypath
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Secrets / 本地配置（禁止入库） ###
+application-local.yml
+application-local.properties
+*.local.yml
+.env
+.env.*
+
+### Logs ###
+*.log
+logs/
+
+### 原模板遗留（保留兼容） ###
 .output/
-#Extension App-file
-*.app
-#Rapid Application Development File
-rad.json
-#Translation Base-file
 *.g.xlf
-#License-files
-*.bclicense
-*.flf
-#Test results file
 TestResults.xml

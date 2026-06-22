@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- orchestrator：主 Agent（Orchestrator · 唯一真 Agent） -->
+    <parent>
+        <groupId>com.xiaomi.shopping</groupId>
+        <artifactId>xiaomi-shopping-agent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>orchestrator</artifactId>
+    <name>orchestrator</name>
+    <description>主 Agent：意图识别、质量判断、重检循环、三层记忆、跨节点编排</description>
+
+    <dependencies>
+        <!-- 内部契约 -->
+        <dependency>
+            <groupId>com.xiaomi.shopping</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+
+        <!-- SpringAI-Alibaba：DashScope（通义千问）+ Agent Framework（版本由 BOM 管理） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+        </dependency>
+
+        <!-- 短期记忆 Redis（① 工作记忆落点） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- 长期记忆/对话存档 PgSQL 访问（结构化部分用 MyBatis-Plus） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>
