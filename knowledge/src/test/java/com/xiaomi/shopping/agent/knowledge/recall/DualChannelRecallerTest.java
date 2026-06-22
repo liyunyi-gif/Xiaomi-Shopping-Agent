@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -96,5 +97,37 @@ class DualChannelRecallerTest {
         DualChannelRecaller recaller = new DualChannelRecaller(sem, kw);
         List<ScoredDoc> merged = recaller.recallParallel("q", 20);
         assertEquals(0, merged.size());
+    }
+
+    @Test
+    @DisplayName("RECALL-001 单路异常不影响另一路结果返回")
+    void shouldIsolateChannelException() {
+        SemanticRecaller sem = mock(SemanticRecaller.class);
+        KeywordRecaller kw = mock(KeywordRecaller.class);
+        when(sem.recall(anyString(), anyInt())).thenThrow(new RuntimeException("semantic down"));
+        when(kw.recall(anyString(), anyInt())).thenReturn(List.of(
+                ScoredDoc.builder().id(1L).content("Redmi K70 specs").kwScore(0.8).build()
+        ));
+
+        DualChannelRecaller recaller = new DualChannelRecaller(sem, kw);
+        List<ScoredDoc> merged = recaller.recallParallel("Redmi K70", 20);
+
+        assertEquals(1, merged.size(), "语义路异常时关键词路结果仍应保留");
+        assertEquals("Redmi K70 specs", merged.get(0).getContent());
+    }
+
+    @Test
+    @DisplayName("RECALL-001 双路召回都会以同一个 topK 触发")
+    void shouldCallBothChannelsWithTopK() {
+        SemanticRecaller sem = mock(SemanticRecaller.class);
+        KeywordRecaller kw = mock(KeywordRecaller.class);
+        when(sem.recall(anyString(), anyInt())).thenReturn(List.of());
+        when(kw.recall(anyString(), anyInt())).thenReturn(List.of());
+
+        DualChannelRecaller recaller = new DualChannelRecaller(sem, kw);
+        recaller.recallParallel("小米14", 7);
+
+        verify(sem).recall("小米14", 7);
+        verify(kw).recall("小米14", 7);
     }
 }

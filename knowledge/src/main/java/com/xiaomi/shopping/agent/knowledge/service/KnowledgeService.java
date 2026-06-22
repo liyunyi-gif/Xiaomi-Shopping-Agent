@@ -5,7 +5,7 @@ import com.xiaomi.shopping.agent.common.contract.KnowledgeResponse;
 import com.xiaomi.shopping.agent.common.contract.SessionSnapshot;
 import com.xiaomi.shopping.agent.knowledge.entityextract.EntityExtractor;
 import com.xiaomi.shopping.agent.knowledge.recall.DualChannelRecaller;
-import com.xiaomi.shopping.agent.knowledge.rerank.WeightedReranker;
+import com.xiaomi.shopping.agent.knowledge.rerank.Reranker;
 import com.xiaomi.shopping.agent.knowledge.rewrite.QueryRewriter;
 import com.xiaomi.shopping.agent.knowledge.signal.ConfidenceSignalBuilder;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ public class KnowledgeService {
 
     private final QueryRewriter queryRewriter;
     private final DualChannelRecaller dualChannelRecaller;
-    private final WeightedReranker weightedReranker;
+    private final Reranker reranker;
     private final ConfidenceSignalBuilder confidenceSignalBuilder;
     private final EntityExtractor entityExtractor;
 
@@ -59,8 +59,8 @@ public class KnowledgeService {
         // 2. 双路并行召回 + 合并去重
         var merged = dualChannelRecaller.recallParallel(rewritten, recallTopK);
 
-        // 3. 加权 rerank
-        var reranked = weightedReranker.rerank(merged, rewritten);
+        // 3. 加权 rerank（外部模型主用，自研降级）
+        var reranked = reranker.rerank(merged, rewritten);
 
         // 4. 生成置信信号（无主观自评）
         return confidenceSignalBuilder.build(reranked, queryEntities);

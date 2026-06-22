@@ -22,14 +22,14 @@
             <artifactId>common</artifactId>
         </dependency>
 
-        <!-- SpringAI-Alibaba：DashScope（通义千问）+ Agent Framework（版本由 BOM 管理） -->
+        <!-- Spring AI：OpenAI 协议手动 Bean 接百炼 qwen-plus（版本由 BOM 管理） -->
         <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-client-chat</artifactId>
         </dependency>
 
         <!-- 短期记忆 Redis（① 工作记忆落点） -->

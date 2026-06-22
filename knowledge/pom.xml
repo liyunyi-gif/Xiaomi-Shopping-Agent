@@ -53,10 +53,20 @@
             <artifactId>tika-parsers-standard-package</artifactId>
         </dependency>
 
-        <!-- 查询重写/Embedding 用通义模型，复用 SAA DashScope -->
+        <!-- 查询重写/Embedding：Spring AI OpenAI 核心包（非 starter，手动声明 Bean 接百炼/硅基流动） -->
         <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-client-chat</artifactId>
+        </dependency>
+
+        <!-- rerank：自研 WebClient 客户端调硅基流动 /v1/rerank -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
         <dependency>

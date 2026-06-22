@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 /**
  * 双路召回并行编排（架构.md §3.2 / 知识库Agent §4.3）★ 简历重点。
@@ -38,9 +39,9 @@ public class DualChannelRecaller {
      */
     public List<ScoredDoc> recallParallel(String query, int topK) {
         CompletableFuture<List<ScoredDoc>> semFuture =
-                CompletableFuture.supplyAsync(() -> safeRecall(semanticRecaller.recall(query, topK), "semantic"));
+                CompletableFuture.supplyAsync(() -> safeRecall(() -> semanticRecaller.recall(query, topK), "semantic"));
         CompletableFuture<List<ScoredDoc>> kwFuture =
-                CompletableFuture.supplyAsync(() -> safeRecall(keywordRecaller.recall(query, topK), "keyword"));
+                CompletableFuture.supplyAsync(() -> safeRecall(() -> keywordRecaller.recall(query, topK), "keyword"));
 
         CompletableFuture.allOf(semFuture, kwFuture).join();
 
@@ -48,12 +49,18 @@ public class DualChannelRecaller {
     }
 
     /** 包装异常，确保单路失败不影响另一路。 */
-    private List<ScoredDoc> safeRecall(List<ScoredDoc> result, String channel) {
-        if (result == null) {
-            log.warn("{} 路召回返回 null，按空处理", channel);
+    private List<ScoredDoc> safeRecall(Supplier<List<ScoredDoc>> supplier, String channel) {
+        try {
+            List<ScoredDoc> result = supplier.get();
+            if (result == null) {
+                log.warn("{} 路召回返回 null，按空处理", channel);
+                return List.of();
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("{} 路召回异常，按空处理：{}", channel, e.getMessage());
             return List.of();
         }
-        return result;
     }
 
     /**

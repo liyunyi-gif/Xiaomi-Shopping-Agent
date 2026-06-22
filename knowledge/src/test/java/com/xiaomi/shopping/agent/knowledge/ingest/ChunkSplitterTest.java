@@ -88,4 +88,32 @@ class ChunkSplitterTest {
             assertTrue(e.getMessage().contains("maxChars"));
         }
     }
+
+    @Test
+    @DisplayName("INGEST-003 单段超长切片保留重叠字符")
+    void shouldKeepOverlapForHardSplit() {
+        String text = "abcdefghijklmnopqrstuvwxyz";
+        List<String> chunks = splitter.split(text, 10, 3);
+
+        assertTrue(chunks.size() > 1, "应切出多片");
+        for (int i = 1; i < chunks.size(); i++) {
+            String previous = chunks.get(i - 1);
+            String current = chunks.get(i);
+            String overlap = previous.substring(previous.length() - 3);
+            assertTrue(current.startsWith(overlap), "相邻硬切片应保留 3 字符重叠");
+        }
+    }
+
+    @Test
+    @DisplayName("INGEST-004 段落聚合切片尽量保留段落语义边界")
+    void shouldPreferParagraphBoundary() {
+        String text = "## 小米14影像\n徕卡影像系统。\n## 小米14续航\n电池容量说明。";
+        List<String> chunks = splitter.split(text, 25, 0);
+
+        assertTrue(chunks.size() >= 2, "标题段落文本应按边界拆成多片");
+        assertTrue(chunks.stream().anyMatch(c -> c.contains("## 小米14影像") && c.contains("徕卡影像系统")),
+                "标题和紧随正文应尽量保留在同一切片");
+        assertTrue(chunks.stream().anyMatch(c -> c.contains("## 小米14续航") && c.contains("电池容量说明")),
+                "标题和紧随正文应尽量保留在同一切片");
+    }
 }

@@ -1,5 +1,5 @@
 # ============ 小米商城智能导购 Agent · bootstrap 配置 ============
-# 骨架阶段配置，连接信息对齐 Docker 服务（详见项目记忆 project-tech-stack）
+# 通用配置可入库；API Key 等敏感配置放 application-local.yml（已 gitignore）或环境变量
 
 server:
   port: 8080
@@ -15,8 +15,8 @@ spring:
   # ---------- PostgreSQL + pgvector ----------
   datasource:
     url: jdbc:postgresql://192.168.122.128:5432/xiaomi_agent
-    username: root
-    password: root
+    username: ${POSTGRES_USERNAME:}
+    password: ${POSTGRES_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -27,32 +27,22 @@ spring:
     redis:
       host: 192.168.122.128
       port: 6379
-      # password: 按需填写
       timeout: 5s
       lettuce:
         pool:
           max-active: 8
           max-idle: 4
 
-  # ---------- Spring AI（通义 DashScope + pgvector + MCP Client）----------
   ai:
-    dashscope:
-      # API Key 从环境变量读取，禁止硬编码入库
-      api-key: ${AI_DASHSCOPE_API_KEY}
-      chat:
-        options:
-          model: qwen-plus
-      embedding:
-        options:
-          model: text-embedding-v3
-
     # ---------- pgvector 向量存储（语义路）----------
     vectorstore:
       pgvector:
-        # 维度待实测确认（架构.md 待确认项：1024 or 1536）
+        # Qwen3-Embedding-8B dimensions=1024（已实测）
         dimensions: 1024
         distance-type: cosine_distance
         index-type: hnsw
+        # 注意：正式环境由 schema.sql 管理 t_knowledge_vector，不让 PgVectorStore 自动创建默认 vector_store 表
+        initialize-schema: false
         index-parameters:
           m: 16
           ef-construction: 64
@@ -67,6 +57,7 @@ spring:
 
 # ---------- MyBatis-Plus ----------
 mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -78,6 +69,27 @@ mybatis-plus:
 # ---------- 业务自定义参数（待实测标定，架构.md §待确认）----------
 xiaomi:
   agent:
+    # Chat：阿里云百炼 OpenAI 兼容端点。api-key 走 application-local.yml 或环境变量。
+    chat:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${DASHSCOPE_API_KEY:}
+      model: qwen-plus-2025-07-28
+
+    # Embedding：硅基流动 Qwen3-Embedding-8B，dimensions=1024。api-key 走 application-local.yml 或环境变量。
+    embedding:
+      base-url: https://api.siliconflow.cn/v1
+      api-key: ${SILICONFLOW_API_KEY:}
+      model: Qwen/Qwen3-Embedding-8B
+      dimensions: 1024
+
+    # Rerank：硅基流动 Qwen3-Reranker-8B。外部模型失败时降级自研 WeightedReranker。
+    rerank:
+      enabled: true
+      base-url: https://api.siliconflow.cn/v1
+      api-key: ${SILICONFLOW_API_KEY:}
+      model: Qwen/Qwen3-Reranker-8B
+      retry: 1
+
     # 质量判断阈值（架构.md §5，待实测标定）
     judge:
       relevance-threshold: 0.7
@@ -87,6 +99,10 @@ xiaomi:
     # 短期记忆窗口 N（最近轮数）
     memory:
       short-term-window: 10
+    # Knowledge 子节点参数
+    knowledge:
+      recall-topk: 20
+      top-n-final: 5
 
 logging:
   level:

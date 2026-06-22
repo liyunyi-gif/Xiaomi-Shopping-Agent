@@ -35,10 +35,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <!-- 框架版本（三者必须成套对齐） -->
+        <!-- 框架版本（成套对齐） -->
         <spring-boot.version>3.4.5</spring-boot.version>
         <spring-ai.version>1.1.2</spring-ai.version>
-        <spring-ai-alibaba.version>1.1.2.2</spring-ai-alibaba.version>
 
         <!-- 中间件/库版本（BOM 未覆盖，需手动锁） -->
         <mybatis-plus.version>3.5.12</mybatis-plus.version>
@@ -63,26 +62,6 @@
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
                 <version>${spring-ai.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <!-- SpringAI-Alibaba BOM（主框架 1.1.2.2） -->
-            <dependency>
-                <groupId>com.alibaba.cloud.ai</groupId>
-                <artifactId>spring-ai-alibaba-bom</artifactId>
-                <version>${spring-ai-alibaba.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <!-- SpringAI-Alibaba Extensions BOM -->
-            <!-- SAA 1.1.2.2 将 starter-dashscope / agent-framework 等置于 extensions，
-                 BOM import 不传递，须在此显式 import，否则 starter 缺版本号 -->
-            <dependency>
-                <groupId>com.alibaba.cloud.ai</groupId>
-                <artifactId>spring-ai-alibaba-extensions-bom</artifactId>
-                <version>${spring-ai-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

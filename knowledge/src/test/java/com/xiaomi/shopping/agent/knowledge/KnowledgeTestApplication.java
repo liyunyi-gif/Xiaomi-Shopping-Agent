@@ -12,7 +12,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author liyunyi
  */
 @SpringBootApplication(
-        scanBasePackages = {"com.xiaomi.shopping.agent.knowledge", "com.xiaomi.shopping.agent.common"}
+        scanBasePackages = {"com.xiaomi.shopping.agent.knowledge", "com.xiaomi.shopping.agent.common"},
+        excludeName = "org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration"
 )
 @MapperScan("com.xiaomi.shopping.agent.knowledge.**.mapper")
 class KnowledgeTestApplication {
