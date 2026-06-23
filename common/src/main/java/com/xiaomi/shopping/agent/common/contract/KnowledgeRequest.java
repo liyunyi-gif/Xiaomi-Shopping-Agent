@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.util.Set;
 
 /**
  * 主 Agent → Knowledge 子节点的请求（架构.md §8.1）
@@ -32,4 +33,7 @@ public class KnowledgeRequest implements Serializable {
 
     /** 本轮重检已用的策略序号（主 Agent 传入，供 Knowledge 选择不同重写策略，对齐 P7 换策略重检） */
     private int retryAttempt;
+
+    /** 主 Agent 抽取并显式注入的查询实体，供 Knowledge 生成命中信号并与 QualityJudge 对齐 */
+    private Set<String> queryEntities;
 }

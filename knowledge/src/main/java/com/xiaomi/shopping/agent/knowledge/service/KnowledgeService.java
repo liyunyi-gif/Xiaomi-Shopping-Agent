@@ -73,7 +73,9 @@ public class KnowledgeService {
      * 此重载内部用 EntityExtractor 自行抽取兜底（不依赖主 Agent 也能跑）。
      */
     public KnowledgeResponse ask(KnowledgeRequest request) {
-        Set<String> entities = entityExtractor.extract(request.getQuestion());
+        Set<String> entities = request.getQueryEntities() == null || request.getQueryEntities().isEmpty()
+                ? entityExtractor.extract(request.getQuestion())
+                : request.getQueryEntities();
         return ask(request.getQuestion(), request.getSnapshot(), entities);
     }
 }

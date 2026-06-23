@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -35,6 +36,9 @@ public class IntentResult {
 
     /** 从问题中抽取的关键实体集合（型号/参数等，供质量判断的「命中实体」信号使用） */
     private Set<String> entities;
+
+    /** 购物/工具意图的槽位，由主 Agent 抽取后注入 Shopping 子节点 */
+    private Map<String, Object> slots;
 
     /**
      * 一级意图类型。
