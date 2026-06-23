@@ -1,0 +1,13 @@
+# ============ MCP Server 本地配置模板 ============
+# 使用方式：复制本文件为 application-local.yml（该文件已被 .gitignore 忽略）。
+# 当前 mcpserver 不需要账号密码，只需要保证端口与 bootstrap 的 MCP_SERVER_URL 对齐。
+
+server:
+  port: ${MCP_SERVER_PORT:8090}
+
+spring:
+  ai:
+    mcp:
+      server:
+        name: xiaomi-shopping-mcp-server
+        version: 1.0.0

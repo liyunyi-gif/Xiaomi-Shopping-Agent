@@ -1,6 +1,5 @@
 package com.xiaomi.shopping.agent.shopping.mcpclient;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -13,7 +12,6 @@ import java.util.UUID;
  * @author liyunyi
  */
 @Component
-@ConditionalOnMissingBean(ShoppingToolGateway.class)
 public class DirectMockShoppingToolGateway implements ShoppingToolGateway {
 
     @Override

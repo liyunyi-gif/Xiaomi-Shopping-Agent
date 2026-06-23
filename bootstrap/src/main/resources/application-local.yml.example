@@ -1,20 +1,54 @@
-# ============ 本地敏感配置模板（复制为 application-local.yml 后填写） ============
-# 注意：application-local.yml 已在 .gitignore 中，严禁提交真实 API Key。
-# 推荐通过环境变量提供：POSTGRES_USERNAME / POSTGRES_PASSWORD / DASHSCOPE_API_KEY / SILICONFLOW_API_KEY。
+# ============ bootstrap 本地配置模板 ============
+# 使用方式：复制本文件为 application-local.yml（该文件已被 .gitignore 忽略），再按本机环境修改。
+# 启动时启用 local profile：-Dspring-boot.run.profiles=local
+
+server:
+  port: 8080
 
 spring:
+  # 本地无 SILICONFLOW_API_KEY 时先排除 PgVectorStore 自动装配，Knowledge 会降级为关键词路。
+  # 如果要启用语义向量召回：配置 SILICONFLOW_API_KEY 后删除/注释本项。
+  autoconfigure:
+    exclude: org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration
+
   datasource:
-    username: ${POSTGRES_USERNAME:}
-    password: ${POSTGRES_PASSWORD:}
+    # PostgreSQL 需要已创建 xiaomi_agent 数据库，并执行 doc/database 下的 SQL 脚本
+    url: ${POSTGRES_URL:jdbc:postgresql://192.168.122.128:5432/xiaomi_agent}
+    username: ${POSTGRES_USERNAME:root}
+    password: ${POSTGRES_PASSWORD:root}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:192.168.122.128}
+      port: ${REDIS_PORT:6379}
+      # 当前默认 Redis 无密码；如果你的 Redis 有密码，可取消下一行注释
+      # password: ${REDIS_PASSWORD:}
+
+  ai:
+    mcp:
+      client:
+        sse:
+          connections:
+            xiaomi-shopping:
+              # mcpserver 默认本机 8090 端口
+              url: ${MCP_SERVER_URL:http://localhost:8090}
 
 xiaomi:
   agent:
     chat:
-      # 阿里云百炼 API Key（qwen-plus-2025-07-28）
+      base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
       api-key: ${DASHSCOPE_API_KEY:}
+      model: ${DASHSCOPE_CHAT_MODEL:qwen-plus-2025-07-28}
+
     embedding:
-      # 硅基流动 API Key（Qwen3-Embedding-8B）
+      base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
       api-key: ${SILICONFLOW_API_KEY:}
+      model: ${SILICONFLOW_EMBEDDING_MODEL:Qwen/Qwen3-Embedding-8B}
+      dimensions: ${SILICONFLOW_EMBEDDING_DIMENSIONS:1024}
+
     rerank:
-      # 硅基流动 API Key（Qwen3-Reranker-8B，与 embedding 共用）
+      enabled: ${RERANK_ENABLED:true}
+      base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
       api-key: ${SILICONFLOW_API_KEY:}
+      model: ${SILICONFLOW_RERANK_MODEL:Qwen/Qwen3-Reranker-8B}
+      retry: ${RERANK_RETRY:1}
