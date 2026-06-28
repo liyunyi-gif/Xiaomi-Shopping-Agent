@@ -11,9 +11,10 @@ interface StatusState {
   refresh: () => Promise<void>
 }
 
-export const useStatusStore = create<StatusState>(set => ({
+export const useStatusStore = create<StatusState>((set, get) => ({
   loading: false,
   refresh: async () => {
+    if (get().loading) return
     set({ loading: true, error: undefined })
     try {
       const [health, ready] = await Promise.all([agentApi.health(), agentApi.ready()])
