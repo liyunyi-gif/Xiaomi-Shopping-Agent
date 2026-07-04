@@ -7,6 +7,9 @@
 > 依据：`doc/前端UIUX需求文档.md`、`doc/接口文档.md`  
 > 设计方法：development-process-skills 文档先行流程 + frontend-design 视觉准则
 
+>
+> **OpenSpec 变更基线**：本文已纳入 `align-docs-for-mvp-contract` 首期 MVP 契约收敛。本文中的“首期/MVP”仅指可运行联调闭环；完整商城交易、复杂记忆、外部 rerank/HNSW 调优、复杂前端动效等均按增强阶段处理。本文审核通过前，不进入对应代码实现。
+
 ---
 
 ## 1. 文档定位
@@ -528,7 +531,7 @@ sequenceDiagram
     F->>F: 展示推荐回复 + 左侧商品卡片高亮
     U->>F: 点击加购动作
     F->>API: POST /api/chat
-    API-->>F: intent=TOOL, 加购结果
+    API-->>F: intent=SHOPPING, 加购结果
     F->>F: 更新右侧购物状态卡
 ```
 
@@ -724,7 +727,8 @@ Props 概念：
 | `≤ 480px` | 单栏移动端，聊天优先，快捷卡横滑 |
 | `481–767px` | 单栏 + 横向快捷操作 + 底部状态 Sheet |
 | `768–1023px` | 两栏布局：聊天 + 侧边 Tab |
-| `≥ 1024px` | 三栏弹性工作台布局 |
+| `1024px - 1199px` | 两栏/侧边 Tab，避免三栏最小宽度溢出 |
+| `≥ 1200px` | 三栏弹性工作台布局 |
 | `≥ 1440px` | 三栏增加中心聊天空间，左右栏贴边 |
 
 ### 10.2 移动端优先级

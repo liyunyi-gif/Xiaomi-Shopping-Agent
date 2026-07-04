@@ -22,10 +22,10 @@
 - 模块：Shopping·工具编排
 - 用例类型：正向
 - 优先级：高
-- 前置条件：主 Agent 注入 ShoppingRequest(action=add_cart, slots={skuId, qty, ...})
+- 前置条件：主 Agent 注入 ShoppingRequest(action=add_to_cart, slots={skuCode, qty, ...})
 - 测试步骤：
   1. Shopping 接收请求
-  2. 经 MCP Client 调用 mcpserver 的 add_cart 工具
+  2. 经 MCP Client 调用 mcpserver 的 add_to_cart 工具
 - 预期结果：
   - 工具被调用，参数正确透传
   - 返回 ShoppingResponse(status=SUCCESS, resultData={cartId,...})
@@ -39,7 +39,7 @@
 - 模块：Shopping·工具编排
 - 用例类型：正向
 - 优先级：中
-- 前置条件：主 Agent 指令依次 add_cart → place_order
+- 前置条件：主 Agent 指令依次 add_to_cart → place_order
 - 测试步骤：
   1. 执行加购
   2. 复用 cartId 执行下单
@@ -96,6 +96,6 @@
 - 预期结果：
   - Shopping **拒绝/不处理**推荐型请求（推荐归 Knowledge）
   - Shopping 内无推荐策略、无付费引导逻辑
-  - 仅有确定性工具编排（add_cart/order/logistics/inventory/promotion）
+  - 仅有确定性工具编排（add_to_cart/place_order/query_logistics/query_stock/query_promotion）
   - 能力正交：检索型→Knowledge，外部调用型→Shopping（P5）
 - 需求来源：架构.md §3.3（边界红线）；原则 P5

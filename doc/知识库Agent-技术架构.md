@@ -4,9 +4,20 @@
 > 文档层级：**技术架构层（细化）**
 > 对应关系：逻辑设计 [架构.md §3.2 / §8.1](../架构.md) ｜ 技术总纲 [技术架构.md](技术架构.md)
 
+>
+> **OpenSpec 变更基线**：本文已纳入 `align-docs-for-mvp-contract` 首期 MVP 契约收敛。本文中的“首期/MVP”仅指可运行联调闭环；完整商城交易、复杂记忆、外部 rerank/HNSW 调优、复杂前端动效等均按增强阶段处理。本文审核通过前，不进入对应代码实现。
+
 ---
 
 ## 0. 文档定位
+
+
+### 0.1 MVP 职责收敛
+
+Knowledge 在 MVP 中是证据提供者，不拥有最终答案权、质量结论权或用户澄清权。允许保留轻量查询规范化（指代消解、术语补全），但重检是否发生、重检策略、最终 `qualityLevel` 均由主 Agent 决定。实体/槽位的 canonical 结果由主 Agent 提供，Knowledge 只用于命中统计。
+
+MVP 检索可先使用“向量召回 + 简化关键词/别名匹配 + 自研加权 rerank”。外部 rerank、HNSW 参数调优、Tika 多格式解析、zhparser 中文分词均为增强项或实测优化项。
+
 
 本文落实 **Knowledge 子节点** 的技术实现——**全自研的检索增强流水线**。
 
@@ -79,16 +90,16 @@ public class KnowledgeIngestService {
     private final KnowledgeChunkMapper chunkMapper; // MyBatis → 写 t_knowledge_chunk
     private final TikaParser tika;
 
-    public void ingest(InputStream doc, String skuId, String title, String specText,
+    public void ingest(InputStream doc, String skuCode, String title, String specText,
                        Map<String,Object> meta) {
         String text = tika.parseToString(doc);                // Tika 解析
         List<String> chunks = chunker.split(text, 400, 50);   // 切片
         for (String chunk : chunks) {
             // ① 文本/标题/规格写入 t_knowledge_chunk（tsv 由触发器自动维护，供关键词路 + rerank 加权）
-            long chunkId = chunkMapper.insert(new KnowledgeChunk(skuId, chunk, title, specText));
+            long chunkId = chunkMapper.insert(new KnowledgeChunk(skuCode, chunk, title, specText));
 
             // ② 向量写入 t_knowledge_vector（VectorStore 内部调 embedding(硅基流动) 后落库，chunk_id 回链）
-            Document d = new Document(chunk, Map.of("chunk_id", chunkId, "sku_id", skuId, "meta", meta));
+            Document d = new Document(chunk, Map.of("chunk_id", chunkId, "sku_code", skuCode, "meta", meta));
             vectorStore.add(List.of(d));
         }
     }
@@ -99,7 +110,7 @@ public class KnowledgeIngestService {
 
 ## 3. 查询重写（流水线唯一的「受限智能」环节）
 
-用 LLM 对原始问题做指代消解、补全、口语化转规范术语。**这是唯一引入智能的地方，且不判断结果质量。**
+用 LLM 或规则对原始问题做指代消解、补全、口语化转规范术语。该步骤只服务检索召回，不生成最终答案、不判断质量；重检策略由主 Agent 下发。
 
 **Prompt 要点：**
 ```
@@ -460,7 +471,7 @@ public class KnowledgeService {
 
     private final QueryRewriter rewriter;
     private final DualChannelRecaller recaller;
-    private final WeightedReranker reranker;
+    private final Reranker reranker; // 门面：MVP 可用 WeightedReranker；增强阶段接外部 rerank
     private final ConfidenceSignalBuilder signalBuilder;
 
     // 主 Agent 调用入口（无状态）
@@ -621,8 +632,6 @@ knowledge/src/main/java/com/xiaomi/shopping/agent/knowledge/
 │   └── RerankWeights.java                   # 权重常量（w_sem/w_kw/w_field）
 ├── signal/                                  # 置信信号（§6）
 │   └── ConfidenceSignalBuilder.java         # 生成三信号（分数/命中实体/召回数）
-├── entityextract/                           # 命中实体提取（§7）
-│   └── EntityExtractor.java                 # 抽取型号/参数实体
 ├── model/
 │   ├── ScoredDoc.java                       # 召回文档（含 simScore/kwScore/title/specText/content）
 │   └── KnowledgeContext.java                # 拼装的检索上下文
@@ -634,7 +643,7 @@ knowledge/src/main/java/com/xiaomi/shopping/agent/knowledge/
 
 | 类 | 职责 | 关键方法 | 对应章节 |
 |---|---|---|---|
-| `KnowledgeIngestService` | Tika 解析+切片+入库 | `ingest(doc, skuId, title, spec, meta)` | §2 |
+| `KnowledgeIngestService` | Tika 解析+切片+入库 | `ingest(doc, skuCode, title, spec, meta)` | §2 |
 | `QueryRewriter` | 查询重写（受限智能） | `rewrite(question, snapshot)` | §3 |
 | `SemanticRecaller` | 语义路召回 | `recall(query, topK)` | §4.1 |
 | `KeywordRecaller` | 关键词路召回 | `recall(query, topK)` | §4.2 |
@@ -643,7 +652,6 @@ knowledge/src/main/java/com/xiaomi/shopping/agent/knowledge/
 | `QwenRerankClient` | 外部 rerank 客户端（硅基流动） | `rerank(query, candidates, topN)` | §5.2 |
 | `Reranker` | 门面：外部主用+自研降级 | `rerank(merged, query)` | §5.1 |
 | `ConfidenceSignalBuilder` | 生成三信号 | `build(reranked, entities)` | §6 |
-| `EntityExtractor` | 实体抽取 | `extract(query)` | §7 |
 | `KnowledgeService` | 子节点入口（无状态） | `ask(question, snapshot, queryEntities)` | §8 |
 
 ### 12.4 与 common 的契约
@@ -654,8 +662,8 @@ knowledge/src/main/java/com/xiaomi/shopping/agent/knowledge/
 
 ## 13. 待确认技术项
 
-- [ ] embedding 维度（决定 `VECTOR(N)`）。
+- [x] embedding 维度：硅基流动 Qwen3-Embedding-8B，`dimensions=1024`。
 - [ ] rerank 权重 `w_sem/w_kw/w_field` 实测标定。
-- [ ] 中文全文检索是否需要 zhparser。
+- [ ] MVP 中文检索先采用向量召回 + 简化关键词/别名匹配；zhparser 为增强项。
 - [ ] `RECALL_TOPK` / `TOP_N_FINAL` / `ef_search` 具体值。
 - [ ] 相关度阈值（与主 Agent `RELEVANCE_THRESHOLD` 联动）。

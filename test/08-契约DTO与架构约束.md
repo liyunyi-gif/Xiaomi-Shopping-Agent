@@ -25,9 +25,9 @@
   1. 构造 KnowledgeRequest
   2. 序列化为 JSON
 - 预期结果：
-  - 含 question / intent / snapshot / retryAttempt
+  - 含 question / intent / snapshot / retryAttempt / queryEntities
   - JSON 序列化/反序列化无损
-  - 字段语义对齐架构.md §8.1（意图+问题+快照）
+  - 字段语义对齐架构.md §8.1（意图+问题+快照+主 Agent 抽取的实体）
 - 需求来源：架构.md §8.1
 
 ---
@@ -57,8 +57,8 @@
 - 测试步骤：
   1. 构造 ShoppingRequest(action, slots, snapshot)
 - 预期结果：
-  - action 为明确操作意图（非原始 query）
-  - slots 含已澄清的商品/数量/地址
+  - action 为明确小写蛇形操作意图（如 add_to_cart，非原始 query）
+  - slots 含已澄清的 skuCode/spec/quantity/address
   - snapshot 注入
 - 需求来源：架构.md §8.2
 
@@ -74,7 +74,7 @@
   1. 校验响应字段
 - 预期结果：
   - status=NEED_CLARIFY 时，missingSlots 非空
-  - status=SUCCESS 时，resultData 含执行结果
+  - status=SUCCESS 时，data/resultData 含执行结果，最终 `/api/chat.data` 可结构化承载
   - status=FAILED 时，errorMessage 非空
   - 状态枚举完整：SUCCESS/NEED_CLARIFY/FAILED
 - 需求来源：架构.md §8.2；原则 P4
@@ -142,3 +142,39 @@
   - shopping 经 MCP 协议调 mcpserver（非 Java 包依赖）
   - bootstrap 聚合三节点
 - 需求来源：原则 P5；技术架构总纲 §6、§8
+
+
+---
+
+## CONTRACT-009 ChatReply 结构化契约完整（正向）
+
+- 模块：契约·ChatReply
+- 用例类型：正向
+- 优先级：高
+- 前置条件：构造一次 `/api/chat` 响应
+- 测试步骤：
+  1. 序列化 ChatReply
+  2. 校验字段集合
+- 预期结果：
+  - 含 answer / intent / needClarify / qualityLevel / retryCount / childCalls
+  - 含 traceId 用于联调定位
+  - 含 data 用于 Knowledge references 或 Shopping cart/order/stock/logistics 结构化结果
+  - intent 使用 KNOWLEDGE / SHOPPING / SYSTEM
+- 需求来源：OpenSpec `mvp-contract-alignment`；接口文档 §5
+
+---
+
+## CONTRACT-010 统一错误 DTO（异常）
+
+- 模块：契约·ErrorResponse
+- 用例类型：异常
+- 优先级：高
+- 前置条件：触发空 message、模型 Key 缺失或 MCP 不可用
+- 测试步骤：
+  1. 调用对应接口
+  2. 检查错误响应 JSON
+- 预期结果：
+  - 含 code / message
+  - 可选含 traceId / details
+  - 前端可按 code 与 message 展示错误，不依赖原始异常堆栈
+- 需求来源：OpenSpec `mvp-contract-alignment`；接口文档 §2.3
