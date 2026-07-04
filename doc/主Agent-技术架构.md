@@ -140,6 +140,37 @@ public class IntentRecognizer {
 
 > **原则（P1）**：意图识别只在主 Agent 做，子节点永远不做意图判断。
 
+### 3.4 意图识别细节流程
+
+```mermaid
+flowchart TD
+    START([收到用户输入]) --> LOAD["加载 SessionSnapshot<br/>短期记忆 + 长期记忆"]
+    LOAD --> BUILD["构造意图识别 Prompt<br/>用户输入 + 最近上下文 + 长期偏好"]
+    BUILD --> LLM["调用 ChatModel<br/>百炼 qwen-plus"]
+    LLM --> PARSE["解析 JSON<br/>intent/confidence/reason/slots/action"]
+    PARSE --> VALID{"JSON 可解析?"}
+    VALID -- "否" --> FALLBACK["规则兜底识别<br/>关键词: 加购/下单/物流/清除记忆等"]
+    VALID -- "是" --> CONF{"confidence >= 阈值?"}
+    FALLBACK --> CONF
+    CONF -- "否" --> CLARIFY["IntentResult.toClarify()<br/>主Agent反问意图"]
+    CONF -- "是" --> TYPE{"一级意图"}
+    TYPE -- "KNOWLEDGE" --> ENT["抽取 queryEntities<br/>型号/规格/参数"]
+    TYPE -- "SHOPPING" --> SLOT["解析 ShoppingAction + slots<br/>skuId/spec/quantity/orderId/address"]
+    TYPE -- "SYSTEM" --> SYS["解析系统动作<br/>清除记忆/查历史"]
+    ENT --> OUT["IntentResult(KNOWLEDGE)"]
+    SLOT --> CHECK_SLOT{"关键槽位是否足够?"}
+    CHECK_SLOT -- "不足" --> CLARIFY_SLOT["needClarify=true<br/>missingSlots 交主Agent发问"]
+    CHECK_SLOT -- "足够" --> OUT_SHOP["IntentResult(SHOPPING)"]
+    SYS --> OUT_SYS["IntentResult(SYSTEM)"]
+```
+
+**落地约束：**
+
+1. `IntentRecognizer` 输出必须是结构化 `IntentResult`，不能把自然语言分类结果直接传给子节点。
+2. 低置信度与槽位不足都只产生“需澄清信号”，由主 Agent 统一组织话术。
+3. `SHOPPING` 的 `ShoppingAction` 在主 Agent 阶段确定，Shopping 子节点不再二次判断用户意图。
+4. `KNOWLEDGE` 的关键实体由主 Agent 抽取并显式传入 Knowledge，用于后续命中实体信号与质量判断。
+
 ---
 
 ## 4. 检索质量判断 + 重检循环（架构核心 · 纯自研 ★）
@@ -251,6 +282,40 @@ sequenceDiagram
         O-->>U: 坦诚告知 + 引导澄清
     end
 ```
+
+### 4.4 一轮 Knowledge 分支的主 Agent 编排细节
+
+```mermaid
+flowchart TD
+    START([IntentResult=KNOWLEDGE]) --> SNAP["准备 KnowledgeRequest<br/>question + snapshot + queryEntities"]
+    SNAP --> CALL["调用 KnowledgeClient.ask"]
+    CALL --> RESP["收到 KnowledgeResponse<br/>chunks + maxScore + hitEntities + recallCount"]
+    RESP --> JUDGE["QualityJudge 四步判定"]
+    JUDGE --> V{"QualityVerdict"}
+    V -- "SUFFICIENT" --> ANSWER["AnswerGenerator<br/>基于 chunks 生成答复"]
+    V -- "FAILURE" --> RETRY{"attempt < MAX_RETRIES?"}
+    V -- "INCOMPLETE" --> RETRY
+    V -- "INSUFFICIENT" --> RETRY
+    RETRY -- "是" --> STRATEGY["LoopQueryRewriter 换策略<br/>attempt=0 换关键词<br/>attempt=1 拆子问题"]
+    STRATEGY --> DIFF{"新 query 是否不同?"}
+    DIFF -- "否" --> FORCE["强制补充约束词/实体<br/>禁止原样重查"]
+    DIFF -- "是" --> CALL2["再次调用 Knowledge"]
+    FORCE --> CALL2
+    CALL2 --> RESP
+    RETRY -- "否" --> DEGRADE["KnowledgeResponse.degraded()<br/>坦诚告知资料不足"]
+    ANSWER --> ARCHIVE["写入 t_message + Redis 短期记忆"]
+    DEGRADE --> ARCHIVE
+    ARCHIVE --> OUT["ChatReply<br/>answer/intent/qualityLevel/retryCount/childCalls"]
+```
+
+**关键字段回写：**
+
+| 字段 | 来源 | 用途 |
+|---|---|---|
+| `qualityLevel` | `QualityVerdict` | 前端展示检索质量状态 |
+| `retryCount` | `RetrievalLoop` 实际重检次数 | 展示重检闭环，便于答辩说明 |
+| `childCalls` | 调用 Knowledge/Shopping 次数 | 展示子节点编排痕迹 |
+| `needClarify` | 低置信度、槽位不足、达上限降级 | 前端展示澄清气泡 |
 
 ---
 

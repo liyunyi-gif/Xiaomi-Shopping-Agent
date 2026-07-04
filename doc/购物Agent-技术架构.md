@@ -241,6 +241,55 @@ public class ShoppingService {
 
 > 编排是**确定性的**（switch + 固定调用顺序），不依赖 LLM 自主选择工具——这是 Shopping 保持「薄」的关键。
 
+### 5.3 一轮 ShoppingRequest 完整处理流程
+
+```mermaid
+flowchart TD
+    IN["主 Agent 注入 ShoppingRequest<br/>action + slots + snapshot"] --> BOUNDARY{"边界检查"}
+    BOUNDARY -- "不是购物工具意图" --> REJECT["拒绝处理/返回 FAILED<br/>Shopping 不做意图识别"]
+    BOUNDARY -- "购物工具意图" --> ACTION{"ShoppingAction"}
+
+    ACTION -- "ADD_TO_CART" --> ADD_SLOT{"skuId/spec/quantity 是否足够?"}
+    ADD_SLOT -- "缺关键槽位" --> NEED_ADD["ShoppingResponse NEED_CLARIFY<br/>missingSlots=[spec/skuId]"]
+    ADD_SLOT -- "足够" --> ADD_TOOL["toolName=add_to_cart<br/>组装 MCP args"]
+
+    ACTION -- "PLACE_ORDER" --> ORDER_SLOT{"cartItem/address/payMethod 是否足够?"}
+    ORDER_SLOT -- "缺关键槽位" --> NEED_ORDER["ShoppingResponse NEED_CLARIFY<br/>missingSlots=[address/payMethod]"]
+    ORDER_SLOT -- "足够" --> ORDER_TOOL["toolName=place_order<br/>从 snapshot 取 cartItemIds"]
+
+    ACTION -- "QUERY_LOGISTICS" --> LOG_SLOT{"orderId 是否存在?"}
+    LOG_SLOT -- "缺 orderId" --> NEED_LOG["ShoppingResponse NEED_CLARIFY<br/>missingSlots=[orderId]"]
+    LOG_SLOT -- "足够" --> LOG_TOOL["toolName=query_logistics"]
+
+    ACTION -- "QUERY_STOCK" --> STOCK_TOOL["toolName=query_stock"]
+    ACTION -- "QUERY_PROMOTION" --> PROMO_TOOL["toolName=query_promotion"]
+
+    ADD_TOOL --> MCP["经 ToolInvoker + MCP Client 调用工具"]
+    ORDER_TOOL --> MCP
+    LOG_TOOL --> MCP
+    STOCK_TOOL --> MCP
+    PROMO_TOOL --> MCP
+
+    MCP --> RESULT{"ToolResult.status"}
+    RESULT -- "success" --> SUCCESS["ShoppingResponse SUCCESS<br/>resultData=工具返回数据"]
+    RESULT -- "need_clarify" --> NEED_TOOL["ShoppingResponse NEED_CLARIFY<br/>透传 missingSlots"]
+    RESULT -- "failed" --> FAILED["ShoppingResponse FAILED<br/>errorCode/errorMessage"]
+
+    NEED_ADD --> OUT["返回主 Agent<br/>由主 Agent 开口"]
+    NEED_ORDER --> OUT
+    NEED_LOG --> OUT
+    NEED_TOOL --> OUT
+    SUCCESS --> OUT
+    FAILED --> OUT
+```
+
+**关键边界：**
+
+1. Shopping 不调用 ChatModel，不做自然语言理解。
+2. Shopping 不直接回答用户，只返回结构化 `ShoppingResponse`。
+3. Shopping 不直接依赖 `mcpserver` Java 包，工具调用必须经 MCP Client。
+4. 缺槽位、库存不足、工具异常都返回状态信号，由主 Agent 决定最终话术。
+
 ---
 
 ## 6. 状态信号返回（对齐 [架构.md §8.2](../架构.md)）

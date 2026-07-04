@@ -316,6 +316,33 @@ public class WeightedReranker {
 
 > 说明：`ScoredDoc` 的 `title/specText` 直接取自 `t_knowledge_chunk` 的独立列（title / spec_text），命中实体比对（§6）以 `content` 列为准。两处字段口径已统一：标题/规格用于 rerank 加权，正文用于命中判定。
 
+### 5.4 Rerank 门面完整流程
+
+```mermaid
+flowchart TD
+    IN["输入: query + mergedCandidates"] --> EMPTY{"候选为空?"}
+    EMPTY -- "是" --> OUT_EMPTY["返回空列表<br/>recallCount=0"]
+    EMPTY -- "否" --> ENABLE{"外部 rerank 可用?<br/>key存在/配置开启/候选数>0"}
+    ENABLE -- "是" --> BUILD["构造 /v1/rerank 请求<br/>model/query/documents/top_n"]
+    BUILD --> CALL["QwenRerankClient<br/>POST SiliconFlow /v1/rerank"]
+    CALL --> OK{"调用成功且结果可映射?"}
+    OK -- "是" --> MAP["按 index 映射回 ScoredDoc<br/>relevance_score -> finalScore"]
+    MAP --> SORT["按 finalScore 降序<br/>截断 TOP_N_FINAL"]
+    OK -- "否/超时/限流/Key缺失" --> FALLBACK["WeightedReranker 降级"]
+    ENABLE -- "否" --> FALLBACK
+    FALLBACK --> TERM["抽取 query terms"]
+    TERM --> SCORE["计算 finalScore<br/>0.5*sim + 0.3*kw + 0.2*fieldBoost"]
+    SCORE --> SORT
+    SORT --> SIGNAL["交 ConfidenceSignalBuilder<br/>生成 maxScore/hitEntities/recallCount"]
+```
+
+**Rerank 不越界原则：**
+
+1. Rerank 只重排候选文档，不生成面向用户的话术。
+2. 外部 rerank 失败必须降级到 `WeightedReranker`，不能让 Knowledge 整体失败。
+3. `finalScore` 是客观排序分数，是否充分仍由主 Agent 的 `QualityJudge` 判断。
+4. `TOP_N_FINAL` 建议小于召回候选数，避免把低质量长尾结果传给主 Agent。
+
 ---
 
 ## 6. 置信信号生成（对齐 P6：只给客观信号，不主观自评）
@@ -376,6 +403,55 @@ public class EntityExtractor {
 ---
 
 ## 8. Knowledge 服务骨架（请求-响应，无状态）
+
+### 8.1 一轮 KnowledgeRequest 完整处理流程
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as 主 Agent
+    participant KS as KnowledgeService
+    participant RW as QueryRewriter
+    participant SPLIT as SubQuestionSplitter
+    participant SEM as SemanticRecaller
+    participant KW as KeywordRecaller
+    participant RR as Reranker
+    participant SIG as ConfidenceSignalBuilder
+
+    O->>KS: KnowledgeRequest(question, snapshot, queryEntities)
+    KS->>RW: rewrite(question, snapshot)
+    RW-->>KS: rewrittenQuery
+    KS->>SPLIT: 判断是否复杂问题/是否需要拆分
+    alt 复杂问题
+        SPLIT-->>KS: subQueries[]
+    else 简单问题
+        KS-->>KS: subQueries=[rewrittenQuery]
+    end
+
+    loop 每个 query/subQuery
+        par 语义召回
+            KS->>SEM: recall(query, topK)
+            SEM-->>KS: semanticCandidates
+        and 关键词召回
+            KS->>KW: recall(query, topK)
+            KW-->>KS: keywordCandidates
+        end
+        KS-->>KS: mergeAndDedup(semantic, keyword)
+    end
+
+    KS->>KS: 多子问题结果合并去重
+    KS->>RR: rerank(originalQuestion, mergedCandidates)
+    RR-->>KS: rerankedTopN
+    KS->>SIG: build(rerankedTopN, queryEntities)
+    SIG-->>KS: maxScore/hitEntities/recallCount
+    KS-->>O: KnowledgeResponse(chunks, 三信号)
+```
+
+**无状态约束：**
+
+- `KnowledgeService` 不读写用户记忆，不保存会话状态。
+- `snapshot` 仅用于查询重写和上下文补全，不在 Knowledge 内持久化。
+- `queryEntities` 由主 Agent 显式传入，Knowledge 只用于命中统计。
 
 ```java
 @Service

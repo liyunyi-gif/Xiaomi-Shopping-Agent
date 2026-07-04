@@ -15,8 +15,8 @@ spring:
   # ---------- PostgreSQL + pgvector ----------
   datasource:
     url: jdbc:postgresql://192.168.122.128:5432/xiaomi_agent
-    username: ${POSTGRES_USERNAME:}
-    password: ${POSTGRES_PASSWORD:}
+    username: ${POSTGRES_USERNAME:root}
+    password: ${POSTGRES_PASSWORD:root}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -72,13 +72,13 @@ xiaomi:
     # Chat：阿里云百炼 OpenAI 兼容端点。api-key 走 application-local.yml 或环境变量。
     chat:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-      api-key: ${DASHSCOPE_API_KEY:}
+      api-key: ${DASHSCOPE_API_KEY:sk-ws-H.RYMPDDI.KDPT.MEUCIC2zh0Du8X5IIjaZkGCZ1XFVRt7ZmZuydmSm9WPLehJ4AiEA3DloGkA8LGmCBYhQv0VhMZOmOmjrbIVzG3iBfVZ7HFM}
       model: qwen-plus-2025-07-28
 
     # Embedding：硅基流动 Qwen3-Embedding-8B，dimensions=1024。api-key 走 application-local.yml 或环境变量。
     embedding:
       base-url: https://api.siliconflow.cn/v1
-      api-key: ${SILICONFLOW_API_KEY:}
+      api-key: ${SILICONFLOW_API_KEY:sk-ehgxuybpxekdbywdykgeycyctqvsxliyhcsxgmqbymrfyrse}
       model: Qwen/Qwen3-Embedding-8B
       dimensions: 1024
 
@@ -86,7 +86,7 @@ xiaomi:
     rerank:
       enabled: true
       base-url: https://api.siliconflow.cn/v1
-      api-key: ${SILICONFLOW_API_KEY:}
+      api-key: ${SILICONFLOW_API_KEY:sk-ehgxuybpxekdbywdykgeycyctqvsxliyhcsxgmqbymrfyrse}
       model: Qwen/Qwen3-Reranker-8B
       retry: 1
 
