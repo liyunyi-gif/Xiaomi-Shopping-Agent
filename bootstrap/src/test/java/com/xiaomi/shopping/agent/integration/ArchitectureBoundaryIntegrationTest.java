@@ -73,4 +73,5 @@ class ArchitectureBoundaryIntegrationTest {
             return false;
         }
     }
+
 }

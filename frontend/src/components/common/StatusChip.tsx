@@ -1,10 +1,10 @@
 import { statusLabel, statusTone } from '../../utils/statusMapping'
 
 const tones = {
-  success: 'border-green-200 bg-green-50 text-green-700',
-  warning: 'border-yellow-200 bg-yellow-50 text-yellow-700',
-  danger: 'border-red-200 bg-red-50 text-red-700',
-  neutral: 'border-slate-200 bg-slate-50 text-slate-600',
+  success: 'border-success/35 bg-success/12 text-success',
+  warning: 'border-warning/40 bg-warning/14 text-warning',
+  danger: 'border-danger/40 bg-danger/14 text-danger',
+  neutral: 'border-border bg-surface-strong text-muted',
 }
 
 interface StatusChipProps {

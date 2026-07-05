@@ -2,6 +2,8 @@
 -- 小米商城智能导购 Agent · 初始化数据 (init)
 -- 配套: schema.sql (先建表), doc/数据库设计.md
 -- 内容: 用户 / 类目 / 示例商品 / 知识库 / 意图树 / 术语映射
+-- MVP 说明: 本脚本当前仅适合空库初始化；如需重复执行请改造为 ON CONFLICT DO NOTHING/UPDATE。
+-- MVP 说明: 本脚本当前仅适合空库初始化；如需重复执行请改造为 ON CONFLICT DO NOTHING/UPDATE。
 -- ============================================================
 
 -- ============================================================
@@ -102,7 +104,7 @@ INSERT INTO t_product_sku (sku_code, spu_id, spec_info, spec_json, price, stock,
 -- ============================================================
 INSERT INTO t_knowledge_base (name, embedding_model, collection_name, description) VALUES
 ('手机平板咨询知识库',
- 'text-embedding-v3',
+ 'Qwen/Qwen3-Embedding-8B',
  'kb_phone_tablet',
  '覆盖手机/平板商品咨询、规格比对、促销政策、售后服务');
 
@@ -152,23 +154,23 @@ INSERT INTO t_intent_node (kb_id, intent_code, name, level, parent_code, kind, d
 (NULL, 'SHOPPING.ADD_TO_CART', '加入购物车', 2, 'SHOPPING', 1,
  '将商品加入购物车',
  '帮我加购一台小米14 16+512||把这款加到购物车',
- 'ADD_TO_CART', 1),
+ 'add_to_cart', 1),
 (NULL, 'SHOPPING.PLACE_ORDER', '提交订单', 2, 'SHOPPING', 1,
  '提交订单/结算下单',
  '帮我下单||直接结算吧',
- 'PLACE_ORDER', 2),
+ 'place_order', 2),
 (NULL, 'SHOPPING.QUERY_LOGISTICS', '查物流', 2, 'SHOPPING', 1,
  '查询订单物流状态',
  '我的订单到哪了||物流单号多少',
- 'QUERY_LOGISTICS', 3),
+ 'query_logistics', 3),
 (NULL, 'SHOPPING.QUERY_STOCK', '查库存', 2, 'SHOPPING', 1,
  '查询商品库存',
  '这个还有货吗||库存多少',
- 'QUERY_STOCK', 4),
+ 'query_stock', 4),
 (NULL, 'SHOPPING.QUERY_PROMOTION', '查优惠', 2, 'SHOPPING', 1,
  '查询可享优惠',
  '我能享受什么优惠||有哪些满减',
- 'QUERY_PROMOTION', 5);
+ 'query_promotion', 5);
 
 -- 二级 · 系统类（SYSTEM 下）
 INSERT INTO t_intent_node (kb_id, intent_code, name, level, parent_code, kind, description, examples, sort_order) VALUES

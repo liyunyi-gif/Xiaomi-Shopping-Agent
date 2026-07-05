@@ -4,9 +4,20 @@
 > 文档层级：**技术架构层（细化）**
 > 对应关系：逻辑设计 [架构.md §3.3 / §8.2](../架构.md) ｜ 技术总纲 [技术架构.md](技术架构.md)
 
+>
+> **OpenSpec 变更基线**：本文已纳入 `align-docs-for-mvp-contract` 首期 MVP 契约收敛。本文中的“首期/MVP”仅指可运行联调闭环；完整商城交易、复杂记忆、外部 rerank/HNSW 调优、复杂前端动效等均按增强阶段处理。本文审核通过前，不进入对应代码实现。
+
 ---
 
 ## 0. 文档定位
+
+
+### 0.1 MVP MCP 边界收敛
+
+MVP 阶段 Shopping 工具调用必须经 MCP Client/Server。MCP Server 可以使用 mock 或 demo 数据源，也可以在 demo 环境共享本项目 PostgreSQL，但它在逻辑上代表“外部小米商城系统”。本文不再允许“首期绕过 MCP 本地调用工具类”的并行口径。
+
+外部入参统一使用 `skuCode` 表示 SKU 业务编码；Shopping action 与 MCP 工具名统一为小写蛇形：`add_to_cart / place_order / query_stock / query_logistics / query_promotion`。
+
 
 本文落实 **Shopping 子节点** 的技术实现——基于 **MCP** 的纯能力网关。
 
@@ -62,7 +73,7 @@ graph TD
 
 ### 部署形态（重要）
 - **MCP Server**：一个独立的 Spring Boot 应用（依赖 `spring-ai-mcp-server-webmvc` 或 `webflux` starter），承载所有工具定义，对外以 MCP 协议暴露。
-- **Shopping 子节点**：主应用内的 MCP Client（依赖 `spring-ai-mcp-client-spring-boot-starter`），通过 stdio/sse 接入 MCP Server，**不直接持有工具类的 Java 引用**——所有工具调用都经 MCP 协议，不绕过。
+- **Shopping 子节点**：主应用内的 MCP Client（依赖 `spring-ai-starter-mcp-client`），通过 SSE 接入 MCP Server，**不直接持有工具类的 Java 引用**——所有工具调用都经 MCP 协议，不绕过。
 - demo 阶段若想简化（单进程），也可用 Spring AI MCP Server Boot Starter 同进程暴露；但本文档按「Server/Client 分离」描述，更贴近真实落地。
 
 ### 工具清单
@@ -71,11 +82,11 @@ graph TD
 
 | 工具名 | 操作表 | 优先级 | 说明 | 关键入参 | 出参状态 |
 |----|----|----|----|----|----|
-| `add_to_cart` | `t_cart_item` | 中 | 加购商品 | skuId、规格、数量 | success / need_clarify(缺规格) |
+| `add_to_cart` | `t_cart_item` | 中 | 加购商品 | skuCode、规格、数量 | success / need_clarify(缺规格) |
 | `place_order` | `t_order` | 中 | 提交订单 | 购物车项、收货地址、支付方式 | success / need_clarify(缺地址) / failed(库存不足) |
 | `query_logistics` | `t_order.logistics_no` | 中 | 查物流 | orderId | success |
-| `query_stock` | `t_product_sku.stock` | 中 | 查库存 | skuId | success |
-| `query_promotion` | （促销表，待扩展） | 低 | 查优惠 | skuId / cartItems | success |
+| `query_stock` | `t_product_sku.stock` | 中 | 查库存 | skuCode | success |
+| `query_promotion` | （促销表，待扩展） | 低 | 查优惠 | skuCode / cartItems | success |
 
 > 工具内部经 `ExternalXxxClient` 调真实外部业务接口（或 Mock 实现），落库到上述表；缺库存时读 `t_product_sku.stock` 判定 `FAILED`，缺槽位时返回 `need_clarify`。
 
@@ -91,9 +102,9 @@ public class CartTools {
     private final ExternalCartClient extClient;   // 对接真实外部加购接口(HTTP/RPC)
 
     @McpTool(name = "add_to_cart",
-             description = "将指定商品加入购物车。需要 skuId、规格(如16+512)、数量。")
+             description = "将指定商品加入购物车。需要 skuCode、规格(如16+512)、数量。")
     public ToolResult addToCart(
-            @McpToolParam(description = "商品SKU", required = true) String skuId,
+            @McpToolParam(description = "商品SKU", required = true) String skuCode,
             @McpToolParam(description = "规格,如 16+512") String spec,
             @McpToolParam(description = "数量,默认1") Integer quantity) {
 
@@ -103,7 +114,7 @@ public class CartTools {
             return ToolResult.needClarify(List.of("spec"));
         }
         try {
-            CartItem item = extClient.add(skuId, spec, qty);  // 调外部业务系统
+            CartItem item = extClient.add(skuCode, spec, qty);  // 调外部业务系统
             return ToolResult.success(Map.of("cartItemId", item.getId()));
         } catch (OutOfStockException e) {
             return ToolResult.failed("OUT_OF_STOCK");
@@ -125,21 +136,13 @@ spring:
   ai:
     mcp:
       client:
-        stdio:
-          servers-configuration: classpath:mcp-servers.json   # 或用 sse/http
+        sse:
+          connections:
+            xiaomi-shopping:
+              url: http://localhost:8090/sse
 ```
 
-`mcp-servers.json` 示例：
-```json
-{
-  "mcpServers": {
-    "xiaomi-shopping": {
-      "command": "java",
-      "args": ["-jar", "mcp-server-shopping.jar"]
-    }
-  }
-}
-```
+SSE 模式下不需要 `mcp-servers.json`；独立 `mcpserver` 默认监听 `http://localhost:8090`。
 
 ### Java 注入（Spring AI 模式）
 
@@ -169,11 +172,11 @@ public class McpClientConfig {
 
 ```java
 public enum ShoppingAction {
-    ADD_TO_CART,      // → add_to_cart
-    PLACE_ORDER,      // → place_order
-    QUERY_LOGISTICS,  // → query_logistics
-    QUERY_STOCK,      // → query_stock
-    QUERY_PROMOTION   // → query_promotion
+    add_to_cart,
+    place_order,
+    query_logistics,
+    query_stock,
+    query_promotion
 }
 ```
 
@@ -195,16 +198,16 @@ public class ShoppingService {
             case PLACE_ORDER     -> doPlaceOrder(intent, snapshot);
             case QUERY_LOGISTICS -> doQueryLogistics(intent);
             case QUERY_STOCK     -> doInvokeTool("query_stock",
-                    Map.of("skuId", intent.getSlot("skuId")));
+                    Map.of("skuCode", intent.getSlot("skuCode")));
             case QUERY_PROMOTION -> doInvokeTool("query_promotion",
-                    Map.of("skuId", intent.getSlot("skuId")));
+                    Map.of("skuCode", intent.getSlot("skuCode")));
         };
     }
 
     // 加购流：确定性选 add_to_cart 工具，拼好参数经 MCP 调用
     private ShoppingResponse doAddToCart(IntentResult intent) {
         Map<String, Object> args = Map.of(
-                "skuId",    intent.getSlot("skuId"),
+                "skuCode",    intent.getSlot("skuCode"),
                 "spec",     intent.getSlot("spec"),       // 可能为空 → 工具内举手
                 "quantity", intent.getIntSlot("quantity", 1));
         return toResponse(doInvokeTool("add_to_cart", args));
@@ -241,6 +244,55 @@ public class ShoppingService {
 
 > 编排是**确定性的**（switch + 固定调用顺序），不依赖 LLM 自主选择工具——这是 Shopping 保持「薄」的关键。
 
+### 5.3 一轮 ShoppingRequest 完整处理流程
+
+```mermaid
+flowchart TD
+    IN["主 Agent 注入 ShoppingRequest<br/>action + slots + snapshot"] --> BOUNDARY{"边界检查"}
+    BOUNDARY -- "不是购物工具意图" --> REJECT["拒绝处理/返回 FAILED<br/>Shopping 不做意图识别"]
+    BOUNDARY -- "购物工具意图" --> ACTION{"ShoppingAction"}
+
+    ACTION -- "ADD_TO_CART" --> ADD_SLOT{"skuCode/spec/quantity 是否足够?"}
+    ADD_SLOT -- "缺关键槽位" --> NEED_ADD["ShoppingResponse NEED_CLARIFY<br/>missingSlots=[spec/skuCode]"]
+    ADD_SLOT -- "足够" --> ADD_TOOL["toolName=add_to_cart<br/>组装 MCP args"]
+
+    ACTION -- "PLACE_ORDER" --> ORDER_SLOT{"cartItem/address/payMethod 是否足够?"}
+    ORDER_SLOT -- "缺关键槽位" --> NEED_ORDER["ShoppingResponse NEED_CLARIFY<br/>missingSlots=[address/payMethod]"]
+    ORDER_SLOT -- "足够" --> ORDER_TOOL["toolName=place_order<br/>从 snapshot 取 cartItemIds"]
+
+    ACTION -- "QUERY_LOGISTICS" --> LOG_SLOT{"orderId 是否存在?"}
+    LOG_SLOT -- "缺 orderId" --> NEED_LOG["ShoppingResponse NEED_CLARIFY<br/>missingSlots=[orderId]"]
+    LOG_SLOT -- "足够" --> LOG_TOOL["toolName=query_logistics"]
+
+    ACTION -- "QUERY_STOCK" --> STOCK_TOOL["toolName=query_stock"]
+    ACTION -- "QUERY_PROMOTION" --> PROMO_TOOL["toolName=query_promotion"]
+
+    ADD_TOOL --> MCP["经 ToolInvoker + MCP Client 调用工具"]
+    ORDER_TOOL --> MCP
+    LOG_TOOL --> MCP
+    STOCK_TOOL --> MCP
+    PROMO_TOOL --> MCP
+
+    MCP --> RESULT{"ToolResult.status"}
+    RESULT -- "success" --> SUCCESS["ShoppingResponse SUCCESS<br/>resultData=工具返回数据"]
+    RESULT -- "need_clarify" --> NEED_TOOL["ShoppingResponse NEED_CLARIFY<br/>透传 missingSlots"]
+    RESULT -- "failed" --> FAILED["ShoppingResponse FAILED<br/>errorCode/errorMessage"]
+
+    NEED_ADD --> OUT["返回主 Agent<br/>由主 Agent 开口"]
+    NEED_ORDER --> OUT
+    NEED_LOG --> OUT
+    NEED_TOOL --> OUT
+    SUCCESS --> OUT
+    FAILED --> OUT
+```
+
+**关键边界：**
+
+1. Shopping 不调用 ChatModel，不做自然语言理解。
+2. Shopping 不直接回答用户，只返回结构化 `ShoppingResponse`。
+3. Shopping 不直接依赖 `mcpserver` Java 包，工具调用必须经 MCP Client。
+4. 缺槽位、库存不足、工具异常都返回状态信号，由主 Agent 决定最终话术。
+
 ---
 
 ## 6. 状态信号返回（对齐 [架构.md §8.2](../架构.md)）
@@ -255,7 +307,7 @@ public class ShoppingService {
 // 输入（主 Agent 注入）
 public record ShoppingRequest(
         String intent,                 // 固定 SHOPPING
-        Map<String, Object> slots,     // skuId/spec/quantity/address/...
+        Map<String, Object> slots,     // skuCode/spec/quantity/address/...
         SessionSnapshot snapshot
 ) {}
 
@@ -306,13 +358,13 @@ public class MockExternalCartClient implements ExternalCartClient {
     private final ProductSkuMapper skuMapper;   // 读 t_product_sku
 
     @Override
-    public CartItem add(String skuId, String spec, int quantity) {
-        int stock = skuMapper.getStockByCode(skuId);   // t_product_sku.stock
+    public CartItem add(String skuCode, String spec, int quantity) {
+        int stock = skuMapper.getStockByCode(skuCode);   // t_product_sku.stock
         if (stock < quantity) {
-            throw new OutOfStockException(skuId);      // → Shopping 返回 FAILED
+            throw new OutOfStockException(skuCode);      // → Shopping 返回 FAILED
         }
         // demo 阶段直接落 t_cart_item（真实环境调外部加购接口）
-        return new CartItem(UUID.randomUUID().toString(), skuId, spec, quantity);
+        return new CartItem(UUID.randomUUID().toString(), skuCode, spec, quantity);
     }
 }
 ```
@@ -388,7 +440,7 @@ public class MockExternalCartClient implements ExternalCartClient {
 </dependencies>
 ```
 
-> demo 阶段 mcpserver 可选：若外部服务用 Mock，可在 shopping 模块内本地实现工具（不经 MCP），仅当真要演练 MCP 协议时才拆独立 mcpserver 进程。
+> demo 阶段 mcpserver 仍作为 MVP 边界保留：工具内部可使用 Mock 或 demo 数据源，但 Shopping 模块不得绕过 MCP 直接调用工具类。
 
 ### 10.2 模块包结构
 
@@ -446,7 +498,7 @@ mcpserver/src/main/java/com/xiaomi/shopping/agent/mcpserver/
 
 ## 11. 待确认技术项
 
-- [ ] MCP 传输方式：stdio / SSE / HTTP，demo 阶段建议 stdio（最简单）。
+- [x] MCP 传输方式：MVP 固定 SSE，mcpserver 默认 `:8090`。
 - [ ] 外部业务接口清单与真实/Mock 边界。
 - [ ] 工具入参 schema 的细化（`@McpToolParam` 详细参数描述）。
 - [ ] Shopping 工具编排是否需要支持多步组合（如"加购并下单"），还是纯单步由主 Agent 串联（当前设计：主 Agent 串联，Shopping 单步）。

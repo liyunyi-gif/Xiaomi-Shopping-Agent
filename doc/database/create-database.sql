@@ -1,6 +1,8 @@
 -- ============================================================
 -- 小米商城智能导购 Agent · 业务库初始化脚本
 -- 用途：创建业务库 xiaomi_agent（schema.sql 在该库内建表）
+-- 环境说明：示例使用 root/固定 IP 仅服务本地 demo；团队/CI/容器环境应替换为实际 owner、host 与数据库名。
+-- 环境说明：示例使用 root/固定 IP 仅服务本地 demo；团队/CI/容器环境应替换为实际 owner、host 与数据库名。
 -- 执行方式：连到 postgres 库执行（CREATE DATABASE 不能在事务块内，也不能连目标库自身）
 --   psql -h 192.168.122.128 -U root -d postgres -f create-database.sql
 -- 然后再连 xiaomi_agent 执行 schema.sql + init.sql：

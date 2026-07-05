@@ -1,7 +1,7 @@
 -- ============================================================
 -- 小米商城智能导购 Agent · 建表脚本 (schema)
 -- Database: PostgreSQL 14+ + pgvector
--- 说明: 本项目库表, 借鉴主流 RAG Agent 系统库表设计裁剪扩展
+-- 说明: 本项目库表, 已按 align-docs-for-mvp-contract 标注 MVP/P1/P2 阶段边界
 -- 配套文档: 数据库设计.md (同目录)
 -- 初始化数据见: init.sql
 -- ============================================================
@@ -69,7 +69,7 @@ CREATE INDEX idx_msg_conv_time ON t_message (conversation_id, user_id, created_a
 COMMENT ON TABLE t_message IS '对话存档表（③逐字历史，实时落盘）';
 COMMENT ON COLUMN t_message.role IS 'user/assistant/system';
 COMMENT ON COLUMN t_message.intent IS '命中的意图（仅 assistant）';
-COMMENT ON COLUMN t_message.quality_verdict IS '检索质量判定 SUFFICIENT/INCOMPLETE/INSUFFICIENT/FAILURE';
+COMMENT ON COLUMN t_message.quality_verdict IS '检索质量判定 SUFFICIENT/INCOMPLETE/INSUFFICIENT/FAILED';
 
 -- ③ 会话摘要（分离存储）
 CREATE TABLE t_conversation_summary (
@@ -244,7 +244,7 @@ CREATE INDEX idx_vec_embedding ON t_knowledge_vector
 CREATE INDEX idx_vec_metadata ON t_knowledge_vector USING GIN (metadata);
 CREATE INDEX idx_vec_kb ON t_knowledge_vector (kb_id);
 COMMENT ON TABLE t_knowledge_vector IS '向量存储表（语义路 HNSW 召回）';
-COMMENT ON COLUMN t_knowledge_vector.embedding IS '向量（通义 text-embedding-v3, 1024维, 待实测确认）';
+COMMENT ON COLUMN t_knowledge_vector.embedding IS '向量（硅基流动 Qwen3-Embedding-8B, dimensions=1024, 已确认）';
 
 -- ============================================================
 -- 模块 5: 意图与查询域
@@ -274,7 +274,7 @@ CREATE TABLE t_intent_node (
 COMMENT ON TABLE t_intent_node IS '意图树表（3一级 / N二级）';
 COMMENT ON COLUMN t_intent_node.level IS '1 一级 / 2 二级';
 COMMENT ON COLUMN t_intent_node.kind IS '0 KNOWLEDGE / 1 SHOPPING / 2 SYSTEM';
-COMMENT ON COLUMN t_intent_node.shopping_action IS '购物动作 ADD_TO_CART/PLACE_ORDER/QUERY_LOGISTICS/QUERY_STOCK/QUERY_PROMOTION';
+COMMENT ON COLUMN t_intent_node.shopping_action IS '购物动作 add_to_cart/place_order/query_logistics/query_stock/query_promotion';
 
 -- 术语归一化映射（查询重写辅助）
 CREATE TABLE t_query_term_mapping (
@@ -358,10 +358,14 @@ CREATE TABLE t_agent_trace (
     created_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted         SMALLINT    NOT NULL DEFAULT 0,
-    CONSTRAINT uk_trace_id UNIQUE (trace_id)
+    span_id         VARCHAR(64)
 );
+CREATE INDEX idx_trace_id ON t_agent_trace (trace_id);
+CREATE INDEX idx_trace_id ON t_agent_trace (trace_id);
 CREATE INDEX idx_trace_conv ON t_agent_trace (conversation_id);
 CREATE INDEX idx_trace_user ON t_agent_trace (user_id);
 COMMENT ON TABLE t_agent_trace IS 'Agent 执行链路表（意图/质量判断/重检/工具追踪）';
 COMMENT ON COLUMN t_agent_trace.node_type IS 'intent/judge/retrieve_rerank/tool/shopping';
 COMMENT ON COLUMN t_agent_trace.extra_data IS '扩展（三信号快照等）';
+COMMENT ON COLUMN t_agent_trace.span_id IS '节点/跨度 ID；同一 trace_id 下可有多条 span';
+COMMENT ON COLUMN t_agent_trace.span_id IS '节点/跨度 ID；同一 trace_id 下可有多条 span';

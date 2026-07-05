@@ -6,6 +6,9 @@
 >
 > 本目录是**编码前**的验收测试用例设计（TDD/BDD 风格），代码完成后据此编写 JUnit 测试跑覆盖率。
 
+>
+> **OpenSpec 变更基线**：本测试计划已纳入 `align-docs-for-mvp-contract`。验收优先级按 MVP 契约收敛：`/api/chat` 结构化 `ChatReply`、`/api/ready` 主状态面板、`KNOWLEDGE/SHOPPING/SYSTEM` 枚举、Shopping 经 MCP、前端不从 `answer` 解析权威状态。
+
 ---
 
 ## 0. 测试设计总则
@@ -72,7 +75,7 @@
 
 | 职责 | 验收点 | 覆盖用例 |
 |---|---|---|
-| 主 Agent · 意图识别（三类一级意图） | KNOWLEDGE/TOOL/SYSTEM 正确分类 | INTENT-002~004 |
+| 主 Agent · 意图识别（三类一级意图） | KNOWLEDGE/SHOPPING/SYSTEM 正确分类 | INTENT-002~004 |
 | 主 Agent · 澄清权（意图级+槽位级） | 低置信/缺槽位触发主 Agent 反问 | INTENT-005, MCP-004 |
 | 主 Agent · 质量判断 + 循环 | 三信号4步判定 + 重检状态机 | JUDGE-001~007 |
 | 主 Agent · 三层记忆 | 短期/长期/存档 分层与注入 | MEM-001~008 |
@@ -118,11 +121,11 @@
 
 | 契约 | 验收点 | 覆盖用例 |
 |---|---|---|
-| 主→Knowledge 注入（意图+问题+快照） | 字段完整、无主观自评 | CONTRACT-001, RECALL-006 |
+| 主→Knowledge 注入（意图+问题+快照+queryEntities） | 字段完整、无主观自评 | CONTRACT-001, RECALL-006 |
 | Knowledge 返回（结果+三信号） | 不含主观质量自评 | CONTRACT-002 |
 | 主→Shopping 注入（意图+槽位+快照） | 槽位已澄清 | CONTRACT-003 |
 | Shopping 返回（状态+结果+缺失槽位） | NEED_CLARIFY 必带缺失清单 | CONTRACT-004 |
-| 会话快照字段 | userId/intent/cart/history 齐全 | CONTRACT-005 |
+| 会话快照字段 | userId/intent/cart/history 齐全，实体另由主 Agent 显式传入 Knowledge | CONTRACT-005 |
 
 ---
 

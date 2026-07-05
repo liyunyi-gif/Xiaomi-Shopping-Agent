@@ -6,10 +6,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: 'bg-brand text-white shadow-sm hover:bg-[#e85f00]',
-  secondary: 'bg-ai-primary text-white shadow-sm hover:bg-ai-secondary',
-  ghost: 'bg-white text-foreground border border-border hover:bg-brand-soft',
-  danger: 'bg-danger text-white hover:bg-red-700',
+  primary: 'border border-brand/70 bg-gradient-to-r from-brand to-[#ff8a1f] text-white shadow-[0_0_22px_rgba(255,105,0,0.22)] hover:shadow-[0_0_30px_rgba(255,105,0,0.34)]',
+  secondary: 'border border-ai-primary/60 bg-ai-primary/12 text-ai-primary shadow-[0_0_18px_rgba(34,211,238,0.18)] hover:bg-ai-primary/18',
+  ghost: 'border border-border bg-surface text-foreground hover:border-ai-primary/70 hover:bg-ai-primary/10',
+  danger: 'border border-danger/70 bg-danger/18 text-danger hover:bg-danger/25',
 }
 
 const sizes = {
@@ -20,7 +20,7 @@ const sizes = {
 export function Button({ children, className = '', variant = 'primary', size = 'md', ...props }: PropsWithChildren<ButtonProps>) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition duration-200 disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}

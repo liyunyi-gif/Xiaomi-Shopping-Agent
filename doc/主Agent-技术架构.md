@@ -4,9 +4,20 @@
 > 文档层级：**技术架构层（细化）**
 > 对应关系：逻辑设计 [架构.md §3.1 / §5 / §6 / §8](../架构.md) ｜ 技术总纲 [技术架构.md](技术架构.md)
 
+>
+> **OpenSpec 变更基线**：本文已纳入 `align-docs-for-mvp-contract` 首期 MVP 契约收敛。本文中的“首期/MVP”仅指可运行联调闭环；完整商城交易、复杂记忆、外部 rerank/HNSW 调优、复杂前端动效等均按增强阶段处理。本文审核通过前，不进入对应代码实现。
+
 ---
 
 ## 0. 文档定位
+
+
+### 0.1 MVP 职责收敛
+
+在 `align-docs-for-mvp-contract` 基线下，主 Agent 是唯一用户决策者：负责意图识别、槽位/实体抽取、是否澄清、是否重检、最终质量结论、最终 `ChatReply` 组装。Knowledge 只返回证据与检索信号；Shopping 只返回工具执行状态与结构化 data。
+
+MVP 阶段三层记忆按“短期上下文 + 对话存档”优先落地；长期记忆自动提炼、权重衰减和用户记忆删除接口属于增强阶段，需在文档审核后再进入代码实现。
+
 
 本文落实 **Orchestrator 主 Agent** 的技术实现。主 Agent 是整个系统**唯一具备自主性的真 Agent**——唯一面对用户、唯一持有记忆、唯一做意图识别。
 
@@ -140,6 +151,37 @@ public class IntentRecognizer {
 
 > **原则（P1）**：意图识别只在主 Agent 做，子节点永远不做意图判断。
 
+### 3.4 意图识别细节流程
+
+```mermaid
+flowchart TD
+    START([收到用户输入]) --> LOAD["加载 SessionSnapshot<br/>短期记忆 + 长期记忆"]
+    LOAD --> BUILD["构造意图识别 Prompt<br/>用户输入 + 最近上下文 + 长期偏好"]
+    BUILD --> LLM["调用 ChatModel<br/>百炼 qwen-plus"]
+    LLM --> PARSE["解析 JSON<br/>intent/confidence/reason/slots/action"]
+    PARSE --> VALID{"JSON 可解析?"}
+    VALID -- "否" --> FALLBACK["规则兜底识别<br/>关键词: 加购/下单/物流/清除记忆等"]
+    VALID -- "是" --> CONF{"confidence >= 阈值?"}
+    FALLBACK --> CONF
+    CONF -- "否" --> CLARIFY["IntentResult.toClarify()<br/>主Agent反问意图"]
+    CONF -- "是" --> TYPE{"一级意图"}
+    TYPE -- "KNOWLEDGE" --> ENT["抽取 queryEntities<br/>型号/规格/参数"]
+    TYPE -- "SHOPPING" --> SLOT["解析 ShoppingAction + slots<br/>skuCode/spec/quantity/orderId/address"]
+    TYPE -- "SYSTEM" --> SYS["解析系统动作<br/>清除记忆/查历史"]
+    ENT --> OUT["IntentResult(KNOWLEDGE)"]
+    SLOT --> CHECK_SLOT{"关键槽位是否足够?"}
+    CHECK_SLOT -- "不足" --> CLARIFY_SLOT["needClarify=true<br/>missingSlots 交主Agent发问"]
+    CHECK_SLOT -- "足够" --> OUT_SHOP["IntentResult(SHOPPING)"]
+    SYS --> OUT_SYS["IntentResult(SYSTEM)"]
+```
+
+**落地约束：**
+
+1. `IntentRecognizer` 输出必须是结构化 `IntentResult`，不能把自然语言分类结果直接传给子节点。
+2. 低置信度与槽位不足都只产生“需澄清信号”，由主 Agent 统一组织话术。
+3. `SHOPPING` 的 `ShoppingAction` 在主 Agent 阶段确定，Shopping 子节点不再二次判断用户意图。
+4. `KNOWLEDGE` 的关键实体由主 Agent 抽取并显式传入 Knowledge，用于后续命中实体信号与质量判断。
+
 ---
 
 ## 4. 检索质量判断 + 重检循环（架构核心 · 纯自研 ★）
@@ -150,7 +192,7 @@ public class IntentRecognizer {
 
 ```java
 public enum QualityVerdict {
-    FAILURE,      // 召回 0
+    FAILED,       // 召回 0
     INCOMPLETE,   // 召回非0但实体未命中
     INSUFFICIENT, // 实体命中但分数低于阈值
     SUFFICIENT    // 全满足
@@ -160,7 +202,7 @@ public class QualityJudge {
 
     public QualityVerdict judge(KnowledgeResponse resp, Set<String> queryEntities) {
         // 步骤1：召回数为0 → 失败
-        if (resp.getRecallCount() == 0) return QualityVerdict.FAILURE;
+        if (resp.getRecallCount() == 0) return QualityVerdict.FAILED;
 
         // 步骤2：关键实体未命中 → 不全
         if (!resp.getHitEntities().containsAll(queryEntities))
@@ -182,7 +224,7 @@ public class QualityJudge {
 graph TD
     START["调用 Knowledge 检索"] --> J{"质量判断 QualityJudge"}
     J -- "SUFFICIENT" --> OUT["直出答案"]
-    J -- "FAILURE/INCOMPLETE/INSUFFICIENT" --> C{"重检次数 &lt; N?"}
+    J -- "FAILED/INCOMPLETE/INSUFFICIENT" --> C{"重检次数 &lt; N?"}
     C -- "否(达上限)" --> GIVEUP["坦诚告知 + 引导澄清<br/>(绝不硬答, 防幻觉)"]
     C -- "是" --> RW["换策略重写<br/>(换词/拆子问题, 禁止原样重查)"]
     RW -->|再调 Knowledge| START
@@ -251,6 +293,40 @@ sequenceDiagram
         O-->>U: 坦诚告知 + 引导澄清
     end
 ```
+
+### 4.4 一轮 Knowledge 分支的主 Agent 编排细节
+
+```mermaid
+flowchart TD
+    START([IntentResult=KNOWLEDGE]) --> SNAP["准备 KnowledgeRequest<br/>question + snapshot + queryEntities"]
+    SNAP --> CALL["调用 KnowledgeClient.ask"]
+    CALL --> RESP["收到 KnowledgeResponse<br/>chunks + maxScore + hitEntities + recallCount"]
+    RESP --> JUDGE["QualityJudge 四步判定"]
+    JUDGE --> V{"QualityVerdict"}
+    V -- "SUFFICIENT" --> ANSWER["AnswerGenerator<br/>基于 chunks 生成答复"]
+    V -- "FAILED" --> RETRY{"attempt < MAX_RETRIES?"}
+    V -- "INCOMPLETE" --> RETRY
+    V -- "INSUFFICIENT" --> RETRY
+    RETRY -- "是" --> STRATEGY["LoopQueryRewriter 换策略<br/>attempt=0 换关键词<br/>attempt=1 拆子问题"]
+    STRATEGY --> DIFF{"新 query 是否不同?"}
+    DIFF -- "否" --> FORCE["强制补充约束词/实体<br/>禁止原样重查"]
+    DIFF -- "是" --> CALL2["再次调用 Knowledge"]
+    FORCE --> CALL2
+    CALL2 --> RESP
+    RETRY -- "否" --> DEGRADE["KnowledgeResponse.degraded()<br/>坦诚告知资料不足"]
+    ANSWER --> ARCHIVE["写入 t_message + Redis 短期记忆"]
+    DEGRADE --> ARCHIVE
+    ARCHIVE --> OUT["ChatReply<br/>answer/intent/qualityLevel/retryCount/childCalls"]
+```
+
+**关键字段回写：**
+
+| 字段 | 来源 | 用途 |
+|---|---|---|
+| `qualityLevel` | `QualityVerdict` | 前端展示检索质量状态 |
+| `retryCount` | `RetrievalLoop` 实际重检次数 | 展示重检闭环，便于答辩说明 |
+| `childCalls` | 调用 Knowledge/Shopping 次数 | 展示子节点编排痕迹 |
+| `needClarify` | 低置信度、槽位不足、达上限降级 | 前端展示澄清气泡 |
 
 ---
 
@@ -372,10 +448,11 @@ KnowledgeResponse k = retrievalLoop.retrieveWithLoop(query, entities, snapshot);
 QualityVerdict v = qualityJudge.judge(k, entities);
 if (v == QualityVerdict.SUFFICIENT) {
     // 转述候选 + 引导用户确认机型
-    String confirmedSku = awaitUserConfirm(k.getResults());
+    // HTTP 请求内不阻塞等待用户确认；本轮返回 needClarify/pendingAction，下一轮用户确认后继续
+    ChatReply pending = ChatReply.needClarify("请确认要加购的机型和规格", PendingAction.addToCartCandidates(k.getResults()));
     // 组装一个 ADD_TO_CART 意图，经 Shopping 契约调用（invoke）
-    IntentResult cartIntent = IntentResult.shopping(ShoppingAction.ADD_TO_CART,
-            Map.of("skuId", confirmedSku));
+    IntentResult cartIntent = IntentResult.shopping(ShoppingAction.add_to_cart,
+            Map.of("skuCode", confirmedSku));
     ShoppingResponse s = shoppingClient.invoke(cartIntent, snapshot);
     respondToUser(s);
 }
@@ -397,7 +474,7 @@ public class OrchestratorService {
     private final MessageArchiver archiver;
     private final ChatMemory chatMemory;
 
-    public String handle(String sessionId, String userId, String userInput) {
+    public ChatReply handle(String sessionId, String userId, String userInput) {
         // 0. 实时存档 ③（不经提炼）
         archiver.archive(sessionId, userId, "user", userInput);
 
@@ -460,7 +537,7 @@ public record IntentResult(
         boolean needClarify,             // 低置信度 → 需澄清
         String clarifyQuestion,          // 澄清反问文案
         ShoppingAction shoppingAction,   // 仅 SHOPPING 意图时有值
-        Map<String, Object> slots        // 槽位（skuId/spec/address/...）
+        Map<String, Object> slots        // 槽位（skuCode/spec/address/...）
 ) {
     public String intent() { return intent; }
     public String getSlot(String key) { return (String) slots.get(key); }

@@ -5,16 +5,19 @@ interface MessageBubbleProps {
 }
 
 const roleClasses = {
-  user: 'ml-auto bg-brand text-white',
-  assistant: 'mr-auto border border-border bg-white text-foreground',
-  system: 'mx-auto border border-ai-primary/20 bg-purple-50 text-ai-primary',
-  error: 'mr-auto border border-red-200 bg-red-50 text-red-700',
+  user: 'ml-auto bg-gradient-to-br from-brand to-[#ff8a1f] text-white shadow-[0_0_22px_rgba(255,105,0,0.2)]',
+  assistant: 'mr-auto border border-ai-primary/28 bg-surface-strong text-foreground',
+  clarify: 'mr-auto border border-warning/45 bg-warning/12 text-foreground',
+  system: 'mx-auto border border-ai-secondary/35 bg-ai-secondary/12 text-ai-primary',
+  error: 'mr-auto border border-danger/45 bg-danger/12 text-danger',
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isAssistant = message.role === 'assistant'
+  const bubbleClass = message.meta?.needClarify ? roleClasses.clarify : roleClasses[message.role]
   return (
-    <article className={`max-w-[82%] rounded-lg px-4 py-3 shadow-sm ${roleClasses[message.role]}`}>
+    <article className={`max-w-[82%] rounded-lg px-4 py-3 shadow-sm ${bubbleClass}`}>
+      {message.meta?.needClarify && <div className="mb-2 h-1 rounded-full bg-warning" aria-hidden="true" />}
       <p className="whitespace-pre-wrap text-sm leading-6 md:text-base">{message.content}</p>
       {isAssistant && message.meta && (
         <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">

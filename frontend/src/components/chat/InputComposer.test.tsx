@@ -31,4 +31,10 @@ describe('InputComposer', () => {
 
     expect(screen.getByRole('button', { name: /发送消息/ })).toBeDisabled()
   })
+
+  it('shows clarification placeholder when Agent needs more information', () => {
+    render(<InputComposer draft="" loading={false} needClarify onDraftChange={() => undefined} onSend={() => undefined} />)
+
+    expect(screen.getByPlaceholderText(/请补充上面 Agent 追问的信息/)).toBeInTheDocument()
+  })
 })
