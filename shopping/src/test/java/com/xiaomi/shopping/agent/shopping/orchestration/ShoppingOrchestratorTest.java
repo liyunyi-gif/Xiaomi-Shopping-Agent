@@ -24,19 +24,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ShoppingOrchestratorTest {
 
     @Test
-    @DisplayName("MCP-001 add_cart 确定性路由到 add_to_cart 并透传参数")
+    @DisplayName("MCP-001 add_to_cart 确定性路由到 add_to_cart 并透传参数")
     void shouldRouteAddCartDeterministically() {
         RecordingGateway gateway = new RecordingGateway(ToolResult.success(Map.of("cartId", "cart-001")));
         ShoppingOrchestrator orchestrator = new ShoppingOrchestrator(gateway);
 
         ShoppingResponse response = orchestrator.orchestrate(ShoppingRequest.builder()
-                .action("add_cart")
-                .slots(Map.of("skuId", "sku-14", "spec", "16GB+512GB", "qty", 2))
+                .action("add_to_cart")
+                .slots(Map.of("skuCode", "sku-14", "spec", "16GB+512GB", "qty", 2))
                 .snapshot(snapshot())
                 .build());
 
         assertEquals("add_to_cart", gateway.calls.get(0).toolName());
-        assertEquals("sku-14", gateway.calls.get(0).args().get("skuId"));
+        assertEquals("sku-14", gateway.calls.get(0).args().get("skuCode"));
         assertEquals("16GB+512GB", gateway.calls.get(0).args().get("spec"));
         assertEquals(2, gateway.calls.get(0).args().get("quantity"));
         assertEquals(ShoppingResponse.ExecStatus.SUCCESS, response.getStatus());
@@ -49,7 +49,7 @@ class ShoppingOrchestratorTest {
         RecordingGateway addGateway = new RecordingGateway(ToolResult.success(Map.of("cartId", "cart-001")));
         ShoppingResponse add = new ShoppingOrchestrator(addGateway).orchestrate(ShoppingRequest.builder()
                 .action("ADD_TO_CART")
-                .slots(Map.of("skuId", "sku-14", "spec", "16GB+512GB"))
+                .slots(Map.of("skuCode", "sku-14", "spec", "16GB+512GB"))
                 .snapshot(snapshot())
                 .build());
 
@@ -74,7 +74,7 @@ class ShoppingOrchestratorTest {
 
         ShoppingResponse response = orchestrator.orchestrate(ShoppingRequest.builder()
                 .action("add_to_cart")
-                .slots(Map.of("skuId", "sku-14"))
+                .slots(Map.of("skuCode", "sku-14"))
                 .snapshot(snapshot())
                 .build());
 
@@ -126,7 +126,7 @@ class ShoppingOrchestratorTest {
         return SessionSnapshot.builder()
                 .userId("u-001")
                 .conversationId("c-001")
-                .currentIntent("TOOL")
+                .currentIntent("SHOPPING")
                 .cartState(Map.of("cart-001", 1))
                 .build();
     }

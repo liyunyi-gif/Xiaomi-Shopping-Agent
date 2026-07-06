@@ -62,15 +62,15 @@ class CrossNodeContractTest {
     @DisplayName("CONTRACT-003 ShoppingRequest action/slots/snapshot 完整")
     void shouldKeepShoppingRequestContract() throws Exception {
         ShoppingRequest request = ShoppingRequest.builder()
-                .action("add_cart")
-                .slots(Map.of("skuId", "小米14", "quantity", 1))
+                .action("add_to_cart")
+                .slots(Map.of("skuCode", "小米14", "quantity", 1))
                 .snapshot(snapshot())
                 .build();
 
         ShoppingRequest restored = objectMapper.readValue(objectMapper.writeValueAsString(request), ShoppingRequest.class);
 
-        assertEquals("add_cart", restored.getAction());
-        assertEquals("小米14", restored.getSlots().get("skuId"));
+        assertEquals("add_to_cart", restored.getAction());
+        assertEquals("小米14", restored.getSlots().get("skuCode"));
         assertEquals("u-001", restored.getSnapshot().getUserId());
     }
 

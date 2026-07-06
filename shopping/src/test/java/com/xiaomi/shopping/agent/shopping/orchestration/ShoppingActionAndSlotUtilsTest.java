@@ -18,7 +18,7 @@ class ShoppingActionAndSlotUtilsTest {
     @Test
     @DisplayName("MCP-001 action 别名统一映射到固定 MCP 工具")
     void shouldNormalizeActionAliases() {
-        assertEquals(ShoppingAction.ADD_TO_CART, ShoppingAction.from("add_cart").orElseThrow());
+        assertEquals(ShoppingAction.ADD_TO_CART, ShoppingAction.from("add_to_cart").orElseThrow());
         assertEquals(ShoppingAction.ADD_TO_CART, ShoppingAction.from("ADD_TO_CART").orElseThrow());
         assertEquals(ShoppingAction.ADD_TO_CART, ShoppingAction.from("add-to-cart").orElseThrow());
         assertEquals(ShoppingAction.PLACE_ORDER, ShoppingAction.from("submit_order").orElseThrow());
@@ -46,7 +46,7 @@ class ShoppingActionAndSlotUtilsTest {
                 "paymentMethod", "ONLINE"
         );
 
-        assertEquals("sku-14", ShoppingSlotUtils.stringSlot(slots, "skuId", "skuCode"));
+        assertEquals("sku-14", ShoppingSlotUtils.stringSlot(slots, "skuCode", "skuId"));
         assertEquals("16GB+512GB", ShoppingSlotUtils.stringSlot(slots, "spec", "specText"));
         assertEquals(2, ShoppingSlotUtils.intSlot(slots, 1, "quantity", "qty"));
         assertEquals("武汉市洪山区", ShoppingSlotUtils.stringSlot(slots, "address", "shippingAddress"));

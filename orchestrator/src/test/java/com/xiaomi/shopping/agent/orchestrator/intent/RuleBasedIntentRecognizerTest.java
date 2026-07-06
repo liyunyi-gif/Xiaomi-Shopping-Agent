@@ -34,9 +34,9 @@ class RuleBasedIntentRecognizerTest {
     void shouldRecognizeToolIntent() {
         IntentResult result = recognizer.recognize("帮我加购一台小米14 16+512", null);
 
-        assertEquals(IntentResult.IntentType.TOOL, result.getPrimaryIntent());
+        assertEquals(IntentResult.IntentType.SHOPPING, result.getPrimaryIntent());
         assertEquals("加购", result.getSecondaryIntent());
-        assertEquals("小米14", result.getSlots().get("skuId"));
+        assertEquals("小米14", result.getSlots().get("skuCode"));
         assertEquals("16+512", result.getSlots().get("spec"));
         assertEquals(1, result.getSlots().get("quantity"));
     }
@@ -64,7 +64,7 @@ class RuleBasedIntentRecognizerTest {
     void shouldRecognizeOrderIntentWithMissingSlots() {
         IntentResult result = recognizer.recognize("帮我下单", null);
 
-        assertEquals(IntentResult.IntentType.TOOL, result.getPrimaryIntent());
+        assertEquals(IntentResult.IntentType.SHOPPING, result.getPrimaryIntent());
         assertEquals("下单", result.getSecondaryIntent());
         assertFalse(result.isNeedClarify());
         assertTrue(result.getSlots().isEmpty());

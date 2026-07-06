@@ -47,7 +47,7 @@ public class RuleBasedIntentRecognizer implements IntentRecognizer {
             return build(IntentResult.IntentType.KNOWLEDGE, "商品推荐", 0.86, false, entities, slots);
         }
         if (containsAny(text, "加购", "加入购物车", "下单", "买", "物流", "订单", "库存")) {
-            return build(IntentResult.IntentType.TOOL, secondaryToolIntent(text), 0.9, false, entities, slots);
+            return build(IntentResult.IntentType.SHOPPING, secondaryToolIntent(text), 0.9, false, entities, slots);
         }
         if (containsAny(text, "规格", "参数", "影像", "性能", "续航", "屏幕", "处理器", "推荐", "对比", "比较", "怎么样", "优惠", "售后")) {
             return build(IntentResult.IntentType.KNOWLEDGE, secondaryKnowledgeIntent(text), 0.88, false, entities, slots);
@@ -113,7 +113,7 @@ public class RuleBasedIntentRecognizer implements IntentRecognizer {
         if (sku == null && snapshot != null && snapshot.getSelectedProducts() != null) {
             sku = snapshot.getSelectedProducts();
         }
-        putIfPresent(slots, "skuId", sku);
+        putIfPresent(slots, "skuCode", sku);
         Matcher specMatcher = SPEC_PATTERN.matcher(text);
         if (specMatcher.find()) {
             putIfPresent(slots, "spec", specMatcher.group().replaceAll("\\s+", ""));

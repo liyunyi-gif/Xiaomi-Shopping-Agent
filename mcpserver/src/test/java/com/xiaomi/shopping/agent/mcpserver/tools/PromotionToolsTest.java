@@ -20,10 +20,10 @@ class PromotionToolsTest {
     @Test
     @DisplayName("query_promotion 只返回优惠查询结果，不做付费引导")
     void shouldQueryPromotionWithoutUpsell() {
-        ToolResult result = tools.queryPromotion(Map.of("skuId", "sku-14"));
+        ToolResult result = tools.queryPromotion(Map.of("skuCode", "sku-14"));
 
         assertEquals(ToolResult.Status.SUCCESS, result.getStatus());
-        assertEquals("sku-14", result.getData().get("skuId"));
+        assertEquals("sku-14", result.getData().get("skuCode"));
         assertEquals("NONE", result.getData().get("promotionType"));
         assertEquals("暂无优惠", result.getData().get("promotion"));
     }

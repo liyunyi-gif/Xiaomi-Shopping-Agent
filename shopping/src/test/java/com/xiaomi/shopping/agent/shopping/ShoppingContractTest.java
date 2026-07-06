@@ -29,16 +29,16 @@ class ShoppingContractTest {
     @DisplayName("CONTRACT-003 ShoppingRequest action/slots/snapshot JSON 序列化无损")
     void shouldSerializeShoppingRequestLosslessly() throws Exception {
         ShoppingRequest request = ShoppingRequest.builder()
-                .action("add_cart")
-                .slots(Map.of("skuId", "sku-14", "quantity", 1, "address", "武汉市洪山区"))
+                .action("add_to_cart")
+                .slots(Map.of("skuCode", "sku-14", "quantity", 1, "address", "武汉市洪山区"))
                 .snapshot(snapshot())
                 .build();
 
         String json = objectMapper.writeValueAsString(request);
         ShoppingRequest restored = objectMapper.readValue(json, ShoppingRequest.class);
 
-        assertEquals("add_cart", restored.getAction());
-        assertEquals("sku-14", restored.getSlots().get("skuId"));
+        assertEquals("add_to_cart", restored.getAction());
+        assertEquals("sku-14", restored.getSlots().get("skuCode"));
         assertEquals("u-001", restored.getSnapshot().getUserId());
         assertNotNull(restored.getSnapshot());
     }
@@ -75,7 +75,7 @@ class ShoppingContractTest {
 
         assertEquals("u-001", snapshot.getUserId());
         assertEquals("c-001", snapshot.getConversationId());
-        assertEquals("TOOL", snapshot.getCurrentIntent());
+        assertEquals("SHOPPING", snapshot.getCurrentIntent());
         assertEquals("最近询问了小米14", snapshot.getRecentContext());
         assertEquals("sku-14", snapshot.getSelectedProducts());
         assertTrue(snapshot.getCartState().containsKey("cart-001"));
@@ -86,7 +86,7 @@ class ShoppingContractTest {
         return SessionSnapshot.builder()
                 .userId("u-001")
                 .conversationId("c-001")
-                .currentIntent("TOOL")
+                .currentIntent("SHOPPING")
                 .recentContext("最近询问了小米14")
                 .selectedProducts("sku-14")
                 .cartState(Map.of("cart-001", 1))

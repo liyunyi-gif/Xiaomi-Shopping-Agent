@@ -22,7 +22,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class ShoppingRequest implements Serializable {
 
-    /** 明确的操作意图（如 add_cart / place_order / query_logistics） */
+    /** 明确的操作意图（如 add_to_cart / place_order / query_logistics） */
     private String action;
 
     /** 槽位：商品/规格/数量/收货地址等（主 Agent 已澄清完成） */

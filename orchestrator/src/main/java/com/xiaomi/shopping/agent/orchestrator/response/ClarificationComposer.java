@@ -15,7 +15,7 @@ public class ClarificationComposer {
 
     private static final Map<String, String> SLOT_NAMES = Map.of(
             "action", "你想执行的购物操作",
-            "skuId", "商品型号",
+            "skuCode", "商品型号",
             "spec", "商品规格",
             "stock", "库存/可购买商品",
             "address", "收货地址",

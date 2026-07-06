@@ -20,18 +20,18 @@ class StockToolsTest {
     @Test
     @DisplayName("query_stock 返回 mock 库存")
     void shouldQueryStock() {
-        ToolResult result = tools.queryStock(Map.of("skuId", "sku-14"));
+        ToolResult result = tools.queryStock(Map.of("skuCode", "sku-14"));
 
         assertEquals(ToolResult.Status.SUCCESS, result.getStatus());
         assertEquals(100, result.getData().get("stock"));
     }
 
     @Test
-    @DisplayName("query_stock 缺 skuId 返回 NEED_CLARIFY")
+    @DisplayName("query_stock 缺 skuCode 返回 NEED_CLARIFY")
     void shouldNeedClarifyWhenSkuMissing() {
         ToolResult result = tools.queryStock(Map.of());
 
         assertEquals(ToolResult.Status.NEED_CLARIFY, result.getStatus());
-        assertEquals(java.util.List.of("skuId"), result.getMissingSlots());
+        assertEquals(java.util.List.of("skuCode"), result.getMissingSlots());
     }
 }

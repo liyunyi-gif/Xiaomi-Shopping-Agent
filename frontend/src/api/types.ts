@@ -4,15 +4,20 @@ export interface ChatRequest {
   message: string
 }
 
-export type AgentIntent = 'KNOWLEDGE' | 'TOOL' | 'SYSTEM' | string
+export type AgentIntent = 'KNOWLEDGE' | 'SHOPPING' | 'SYSTEM' | string
+
+export type ChatReplyData = Record<string, unknown>
 
 export interface ChatReply {
   answer: string
   intent?: AgentIntent | null
   needClarify?: boolean
+  clarifyQuestion?: string | null
   qualityLevel?: string | null
   retryCount?: number | null
   childCalls?: number | null
+  data?: ChatReplyData | null
+  traceId?: string | null
 }
 
 export interface HealthResponse {

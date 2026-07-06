@@ -22,7 +22,7 @@ class DirectMockShoppingToolGatewayTest {
     @Test
     @DisplayName("MCP-001 mock add_to_cart 成功返回 cartId 且默认数量为 1")
     void shouldMockAddToCartWithDefaultQuantity() {
-        ToolResult result = gateway.invoke("add_to_cart", Map.of("skuId", "sku-14", "spec", "16GB+512GB"));
+        ToolResult result = gateway.invoke("add_to_cart", Map.of("skuCode", "sku-14", "spec", "16GB+512GB"));
 
         assertEquals(ShoppingResponse.ExecStatus.SUCCESS, result.getStatus());
         assertFalse(result.getData().get("cartId").toString().isBlank());
@@ -31,14 +31,14 @@ class DirectMockShoppingToolGatewayTest {
     }
 
     @Test
-    @DisplayName("MCP-003 mock add_to_cart 缺 skuId/spec/stock 时举手")
+    @DisplayName("MCP-003 mock add_to_cart 缺 skuCode/spec/stock 时举手")
     void shouldMockAddToCartNeedClarifyForMissingInputs() {
         ToolResult missingSku = gateway.invoke("add_to_cart", Map.of("spec", "16GB+512GB"));
-        ToolResult missingSpec = gateway.invoke("add_to_cart", Map.of("skuId", "sku-14"));
-        ToolResult outOfStock = gateway.invoke("add_to_cart", Map.of("skuId", "OUT_OF_STOCK", "spec", "16GB+512GB"));
+        ToolResult missingSpec = gateway.invoke("add_to_cart", Map.of("skuCode", "sku-14"));
+        ToolResult outOfStock = gateway.invoke("add_to_cart", Map.of("skuCode", "OUT_OF_STOCK", "spec", "16GB+512GB"));
 
         assertEquals(ShoppingResponse.ExecStatus.NEED_CLARIFY, missingSku.getStatus());
-        assertEquals(java.util.List.of("skuId"), missingSku.getMissingSlots());
+        assertEquals(java.util.List.of("skuCode"), missingSku.getMissingSlots());
         assertEquals(ShoppingResponse.ExecStatus.NEED_CLARIFY, missingSpec.getStatus());
         assertEquals(java.util.List.of("spec"), missingSpec.getMissingSlots());
         assertEquals(ShoppingResponse.ExecStatus.NEED_CLARIFY, outOfStock.getStatus());
@@ -64,8 +64,8 @@ class DirectMockShoppingToolGatewayTest {
     @DisplayName("MCP 工具查询类 mock 结果完整，未知工具返回 FAILED")
     void shouldMockQueryToolsAndFailUnknownTool() {
         ToolResult logistics = gateway.invoke("query_logistics", Map.of("orderId", "order-001"));
-        ToolResult stock = gateway.invoke("query_stock", Map.of("skuId", "OUT_OF_STOCK"));
-        ToolResult promotion = gateway.invoke("query_promotion", Map.of("skuId", "sku-14"));
+        ToolResult stock = gateway.invoke("query_stock", Map.of("skuCode", "OUT_OF_STOCK"));
+        ToolResult promotion = gateway.invoke("query_promotion", Map.of("skuCode", "sku-14"));
         ToolResult unknown = gateway.invoke("not_exists", Map.of());
 
         assertEquals(ShoppingResponse.ExecStatus.SUCCESS, logistics.getStatus());

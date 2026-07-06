@@ -36,8 +36,8 @@ describe('BackendStatusPanel', () => {
   it('renders health and aggregate ready status without relying on colors only', () => {
     render(<BackendStatusPanel />)
 
-    expect(screen.getByText('健康: 正常')).toBeInTheDocument()
-    expect(screen.getByText('聚合: 降级')).toBeInTheDocument()
+    expect(screen.getByText('Ready主信号: 降级')).toBeInTheDocument()
+    expect(screen.getByText('Health存活: 正常')).toBeInTheDocument()
     expect(screen.getByText('部分能力降级运行')).toBeInTheDocument()
   })
 

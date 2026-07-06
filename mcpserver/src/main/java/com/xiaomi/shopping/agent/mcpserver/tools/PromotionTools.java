@@ -16,20 +16,28 @@ public class PromotionTools {
 
     @Tool(name = "query_promotion", description = "查询指定 SKU 或购物车的已有优惠信息")
     public ToolResult queryPromotion(Map<String, Object> args) {
-        String skuId = string(args, "skuId");
+        String skuCode = string(args, "skuCode", "skuId");
         return ToolResult.success(Map.of(
-                "skuId", skuId == null ? "UNKNOWN" : skuId,
+                "skuCode", skuCode == null ? "UNKNOWN" : skuCode,
                 "promotion", "暂无优惠",
                 "promotionType", "NONE"
         ));
     }
 
-    private String string(Map<String, Object> args, String name) {
-        Object value = args == null ? null : args.get(name);
-        if (value == null) {
+    private String string(Map<String, Object> args, String... names) {
+        if (args == null) {
             return null;
         }
-        String text = String.valueOf(value).trim();
-        return text.isEmpty() ? null : text;
+        for (String name : names) {
+            Object value = args.get(name);
+            if (value == null) {
+                continue;
+            }
+            String text = String.valueOf(value).trim();
+            if (!text.isEmpty()) {
+                return text;
+            }
+        }
+        return null;
     }
 }

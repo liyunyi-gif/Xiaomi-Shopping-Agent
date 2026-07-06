@@ -8,7 +8,7 @@ export function LeftPanel() {
   const setDraft = useChatStore(state => state.setDraft)
 
   return (
-    <aside className="hidden min-h-0 flex-col gap-4 overflow-y-auto pr-1 lg:flex">
+    <aside className="hidden min-h-0 flex-col gap-4 overflow-y-auto pr-1 xl:flex">
       <Card className="p-4 transition duration-300 hover:border-ai-primary/55 hover:shadow-[0_0_34px_rgba(34,211,238,0.16)]">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-ai-primary">Demo Rail</p>
         <h2 className="mt-1 font-heading text-lg font-bold text-foreground">快捷演示</h2>

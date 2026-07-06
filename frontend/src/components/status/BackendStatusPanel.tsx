@@ -43,8 +43,8 @@ export function BackendStatusPanel() {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <StatusChip value={health?.status} label="健康" />
-        <StatusChip value={ready?.status} label="聚合" />
+        <StatusChip value={ready?.status} label="Ready主信号" />
+        <StatusChip value={health?.status} label="Health存活" />
         {lastRefreshedAt && <span className="text-xs text-muted">刷新于 {new Date(lastRefreshedAt).toLocaleTimeString()}</span>}
       </div>
 

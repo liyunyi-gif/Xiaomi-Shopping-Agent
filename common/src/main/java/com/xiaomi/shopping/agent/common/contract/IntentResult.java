@@ -11,7 +11,7 @@ import java.util.Set;
 /**
  * 意图识别结果（架构.md §3.1 / §8）
  * <p>
- * 一级意图三类：知识库问答 / 工具调用 / 系统指令（不可变，P1 唯一入口）。
+ * 一级意图三类：知识库问答 / 购物工具 / 系统指令（不可变，P1 唯一入口）。
  * 低置信度时触发澄清反问（主 Agent 唯一开口权，P2）。
  *
  * @author liyunyi
@@ -22,7 +22,7 @@ import java.util.Set;
 @AllArgsConstructor
 public class IntentResult {
 
-    /** 一级意图枚举（KNOWLEDGE / TOOL / SYSTEM） */
+    /** 一级意图枚举（KNOWLEDGE / SHOPPING / SYSTEM） */
     private IntentType primaryIntent;
 
     /** 二级意图（如：商品推荐/参数咨询/加购/下单/物流查询，落地清单见 init.sql 意图树） */
@@ -37,7 +37,7 @@ public class IntentResult {
     /** 从问题中抽取的关键实体集合（型号/参数等，供质量判断的「命中实体」信号使用） */
     private Set<String> entities;
 
-    /** 购物/工具意图的槽位，由主 Agent 抽取后注入 Shopping 子节点 */
+    /** 购物意图的槽位，由主 Agent 抽取后注入 Shopping 子节点 */
     private Map<String, Object> slots;
 
     /**
@@ -46,8 +46,8 @@ public class IntentResult {
     public enum IntentType {
         /** 知识库问答（检索型能力，委派 Knowledge） */
         KNOWLEDGE,
-        /** 工具调用（外部调用型能力，委派 Shopping） */
-        TOOL,
+        /** 购物工具调用（外部调用型能力，委派 Shopping） */
+        SHOPPING,
         /** 系统指令（清除记忆/查看历史等，主 Agent 自处理） */
         SYSTEM
     }

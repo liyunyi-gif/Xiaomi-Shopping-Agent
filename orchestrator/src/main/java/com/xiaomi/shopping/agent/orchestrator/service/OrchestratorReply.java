@@ -7,8 +7,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 /**
- * Orchestrator 面向上层的处理结果。
+ * Orchestrator 面向上层的 ChatReply 处理结果。
  *
  * @author liyunyi
  */
@@ -21,7 +23,10 @@ public class OrchestratorReply {
     private String answer;
     private IntentResult.IntentType intent;
     private boolean needClarify;
+    private String clarifyQuestion;
     private QualityVerdict.Level qualityLevel;
     private int retryCount;
     private int childCalls;
+    private Map<String, Object> data;
+    private String traceId;
 }

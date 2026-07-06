@@ -27,11 +27,11 @@ public class DirectMockShoppingToolGateway implements ShoppingToolGateway {
     }
 
     private ToolResult addToCart(Map<String, Object> args) {
-        String skuId = string(args, "skuId");
+        String skuCode = string(args, "skuCode", "skuId");
         String spec = string(args, "spec");
         int quantity = integer(args, "quantity", 1);
-        if (skuId == null) {
-            return ToolResult.needClarify(List.of("skuId"));
+        if (skuCode == null) {
+            return ToolResult.needClarify(List.of("skuCode"));
         }
         if (spec == null) {
             return ToolResult.needClarify(List.of("spec"));
@@ -39,12 +39,12 @@ public class DirectMockShoppingToolGateway implements ShoppingToolGateway {
         if (quantity <= 0) {
             return ToolResult.failed("INVALID_QUANTITY");
         }
-        if (isOutOfStock(args, skuId)) {
+        if (isOutOfStock(args, skuCode)) {
             return ToolResult.needClarify(List.of("stock"));
         }
         return ToolResult.success(Map.of(
                 "cartId", "cart-" + shortId(),
-                "skuId", skuId,
+                "skuCode", skuCode,
                 "spec", spec,
                 "quantity", quantity,
                 "tool", "add_to_cart"
@@ -84,37 +84,45 @@ public class DirectMockShoppingToolGateway implements ShoppingToolGateway {
     }
 
     private ToolResult queryStock(Map<String, Object> args) {
-        String skuId = string(args, "skuId");
-        if (skuId == null) {
-            return ToolResult.needClarify(List.of("skuId"));
+        String skuCode = string(args, "skuCode", "skuId");
+        if (skuCode == null) {
+            return ToolResult.needClarify(List.of("skuCode"));
         }
-        int stock = isOutOfStock(args, skuId) ? 0 : 100;
-        return ToolResult.success(Map.of("skuId", skuId, "stock", stock, "tool", "query_stock"));
+        int stock = isOutOfStock(args, skuCode) ? 0 : 100;
+        return ToolResult.success(Map.of("skuCode", skuCode, "stock", stock, "tool", "query_stock"));
     }
 
     private ToolResult queryPromotion(Map<String, Object> args) {
-        String skuId = string(args, "skuId");
+        String skuCode = string(args, "skuCode", "skuId");
         return ToolResult.success(Map.of(
-                "skuId", skuId == null ? "UNKNOWN" : skuId,
+                "skuCode", skuCode == null ? "UNKNOWN" : skuCode,
                 "promotion", "暂无优惠",
                 "tool", "query_promotion"
         ));
     }
 
-    private boolean isOutOfStock(Map<String, Object> args, String skuId) {
+    private boolean isOutOfStock(Map<String, Object> args, String skuCode) {
         Object stock = args == null ? null : args.get("stock");
-        return "OUT_OF_STOCK".equalsIgnoreCase(skuId)
-                || "0".equals(skuId)
+        return "OUT_OF_STOCK".equalsIgnoreCase(skuCode)
+                || "0".equals(skuCode)
                 || (stock instanceof Number number && number.intValue() <= 0);
     }
 
-    private String string(Map<String, Object> args, String name) {
-        Object value = args == null ? null : args.get(name);
-        if (value == null) {
+    private String string(Map<String, Object> args, String... names) {
+        if (args == null) {
             return null;
         }
-        String text = String.valueOf(value).trim();
-        return text.isEmpty() ? null : text;
+        for (String name : names) {
+            Object value = args.get(name);
+            if (value == null) {
+                continue;
+            }
+            String text = String.valueOf(value).trim();
+            if (!text.isEmpty()) {
+                return text;
+            }
+        }
+        return null;
     }
 
     private int integer(Map<String, Object> args, String name, int defaultValue) {

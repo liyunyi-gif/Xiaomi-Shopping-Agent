@@ -16,7 +16,13 @@ describe('ProductCard', () => {
     await userEvent.click(screen.getByRole('button', { name: '查库存' }))
 
     expect(useChatStore.getState().draft).toContain('查一下')
-    expect(useChatStore.getState().draft).toContain(mockProducts[0].skuId)
+    expect(useChatStore.getState().draft).toContain(mockProducts[0].skuCode)
+  })
+
+  it('labels static product card as demo content', () => {
+    render(<ProductCard product={mockProducts[0]} />)
+
+    expect(screen.getByText('演示样例')).toBeInTheDocument()
   })
 
   it('fills add-to-cart natural language prompt', async () => {

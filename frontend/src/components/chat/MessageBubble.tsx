@@ -25,6 +25,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {message.meta.qualityLevel && <span>质量：{message.meta.qualityLevel}</span>}
           {typeof message.meta.retryCount === 'number' && <span>重检：{message.meta.retryCount}</span>}
           {typeof message.meta.childCalls === 'number' && <span>调用：{message.meta.childCalls}</span>}
+          {message.meta.traceId && <span>Trace：{message.meta.traceId}</span>}
           {message.meta.needClarify && <span className="font-semibold text-warning">需要补充信息</span>}
         </div>
       )}

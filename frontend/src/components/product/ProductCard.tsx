@@ -17,7 +17,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <h3 className="font-heading text-lg font-bold text-foreground">{product.name}</h3>
           <p className="mt-1 text-sm text-muted">{product.spec}</p>
         </div>
-        <span className="rounded-full border border-brand/35 bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">推荐</span>
+        <span className="rounded-full border border-brand/35 bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">演示样例</span>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {product.tags.map(tag => (
@@ -28,7 +28,7 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
       <p className="mt-3 text-sm leading-6 text-muted">{product.reason}</p>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setDraft(`查一下 ${product.skuId} 有没有库存`)}>
+        <Button variant="ghost" size="sm" onClick={() => setDraft(`查一下 ${product.skuCode} 有没有库存`)}>
           查库存
         </Button>
         <Button size="sm" onClick={() => setDraft(`帮我加购一台${product.name} ${product.spec}`)}>

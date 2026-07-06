@@ -48,7 +48,7 @@ public class ShoppingOrchestrator {
 
         switch (action) {
             case ADD_TO_CART -> {
-                putIfPresent(args, "skuId", ShoppingSlotUtils.stringSlot(slots, "skuId", "skuCode"));
+                putIfPresent(args, "skuCode", ShoppingSlotUtils.stringSlot(slots, "skuCode", "skuId"));
                 putIfPresent(args, "spec", ShoppingSlotUtils.stringSlot(slots, "spec", "specText"));
                 args.put("quantity", ShoppingSlotUtils.intSlot(slots, 1, "quantity", "qty"));
                 putIfPresent(args, "stock", ShoppingSlotUtils.first(slots, "stock"));
@@ -68,11 +68,11 @@ public class ShoppingOrchestrator {
             }
             case QUERY_LOGISTICS -> putIfPresent(args, "orderId", ShoppingSlotUtils.stringSlot(slots, "orderId", "orderNo"));
             case QUERY_STOCK -> {
-                putIfPresent(args, "skuId", ShoppingSlotUtils.stringSlot(slots, "skuId", "skuCode"));
+                putIfPresent(args, "skuCode", ShoppingSlotUtils.stringSlot(slots, "skuCode", "skuId"));
                 putIfPresent(args, "stock", ShoppingSlotUtils.first(slots, "stock"));
             }
             case QUERY_PROMOTION -> {
-                putIfPresent(args, "skuId", ShoppingSlotUtils.stringSlot(slots, "skuId", "skuCode"));
+                putIfPresent(args, "skuCode", ShoppingSlotUtils.stringSlot(slots, "skuCode", "skuId"));
                 putIfPresent(args, "cartItems", ShoppingSlotUtils.first(slots, "cartItems"));
                 if (snapshot != null && !args.containsKey("cartItems")) {
                     putIfPresent(args, "cartItems", snapshot.getCartState());

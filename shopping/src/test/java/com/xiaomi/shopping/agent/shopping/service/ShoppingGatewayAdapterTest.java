@@ -28,7 +28,7 @@ class ShoppingGatewayAdapterTest {
         };
         ShoppingGatewayAdapter adapter = new ShoppingGatewayAdapter(service);
 
-        ShoppingResponse response = adapter.invoke(ShoppingRequest.builder().action("add_cart").build());
+        ShoppingResponse response = adapter.invoke(ShoppingRequest.builder().action("add_to_cart").build());
 
         assertEquals(ShoppingResponse.ExecStatus.SUCCESS, response.getStatus());
         assertEquals(true, response.getResultData().get("delegated"));

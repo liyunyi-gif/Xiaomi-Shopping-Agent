@@ -15,6 +15,7 @@ export interface ChatMessage {
     qualityLevel?: string | null
     retryCount?: number | null
     childCalls?: number | null
+    traceId?: string | null
   }
 }
 
@@ -82,6 +83,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           qualityLevel: reply.qualityLevel,
           retryCount: reply.retryCount,
           childCalls: reply.childCalls,
+          traceId: reply.traceId,
         },
       }
 
@@ -89,7 +91,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: [...state.messages, assistantMessage],
         loading: false,
         lastReply: reply,
-        shoppingState: parseShoppingState(reply.answer, reply.needClarify) ?? state.shoppingState,
+        shoppingState: parseShoppingState(reply) ?? state.shoppingState,
       }))
     } catch (error) {
       const apiError = error as ApiError

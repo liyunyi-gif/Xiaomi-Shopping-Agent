@@ -27,8 +27,8 @@ class ShoppingServiceTest {
         ShoppingOrchestrator orchestrator = mock(ShoppingOrchestrator.class);
         ShoppingService service = new ShoppingService(orchestrator);
         ShoppingRequest request = ShoppingRequest.builder()
-                .action("add_cart")
-                .slots(Map.of("skuId", "sku-14", "spec", "16GB+512GB"))
+                .action("add_to_cart")
+                .slots(Map.of("skuCode", "sku-14", "spec", "16GB+512GB"))
                 .build();
         ShoppingResponse expected = ShoppingResponse.builder()
                 .status(ShoppingResponse.ExecStatus.SUCCESS)

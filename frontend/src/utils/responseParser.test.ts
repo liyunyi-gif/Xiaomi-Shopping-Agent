@@ -1,22 +1,41 @@
 import { describe, expect, it } from 'vitest'
 import { parseShoppingState } from './responseParser'
 
+const baseReply = {
+  answer: '已处理成功',
+  intent: 'SHOPPING',
+  needClarify: false,
+}
+
 describe('parseShoppingState', () => {
-  it('parses cart result', () => {
-    const result = parseShoppingState('已处理成功：{cartId=cart-1234, skuId=sku-14, spec=16GB+512GB, quantity=1}')
+  it('parses structured cart result', () => {
+    const result = parseShoppingState({
+      ...baseReply,
+      data: {
+        status: 'SUCCESS',
+        tool: 'add_to_cart',
+        cart: { cartId: 'cart-1234', skuCode: 'sku-14', spec: '16GB+512GB', quantity: 1 },
+      },
+    })
 
     expect(result?.type).toBe('added')
     expect(result?.fields?.cartId).toBe('cart-1234')
-    expect(result?.fields?.skuId).toBe('sku-14')
+    expect(result?.fields?.skuCode).toBe('sku-14')
   })
 
-  it('parses clarify result', () => {
-    const result = parseShoppingState('还需要补充[商品规格]，请告诉我后我再继续处理。', true)
+  it('parses clarify result from ChatReply fields', () => {
+    const result = parseShoppingState({
+      answer: '还需要补充[商品规格]，请告诉我后我再继续处理。',
+      intent: 'SHOPPING',
+      needClarify: true,
+      clarifyQuestion: '还需要补充商品规格。',
+      data: { status: 'NEED_CLARIFY', missingSlots: ['spec'] },
+    })
 
     expect(result?.type).toBe('needClarify')
   })
 
-  it('returns undefined when answer cannot be parsed', () => {
-    expect(parseShoppingState('根据当前知识库资料：这是一段普通回复')).toBeUndefined()
+  it('does not parse natural-language answer as authoritative state', () => {
+    expect(parseShoppingState({ ...baseReply, answer: '已处理成功：{cartId=cart-1234, skuCode=sku-14}' })).toBeUndefined()
   })
 })

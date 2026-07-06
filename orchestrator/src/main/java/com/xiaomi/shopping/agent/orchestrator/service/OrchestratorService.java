@@ -1,6 +1,7 @@
 package com.xiaomi.shopping.agent.orchestrator.service;
 
 import com.xiaomi.shopping.agent.common.contract.IntentResult;
+import com.xiaomi.shopping.agent.common.contract.KnowledgeResponse;
 import com.xiaomi.shopping.agent.common.contract.SessionSnapshot;
 import com.xiaomi.shopping.agent.common.contract.ShoppingRequest;
 import com.xiaomi.shopping.agent.common.contract.ShoppingResponse;
@@ -18,7 +19,10 @@ import com.xiaomi.shopping.agent.orchestrator.system.SystemCommandHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Orchestrator 主 Agent 核心服务。
@@ -41,22 +45,27 @@ public class OrchestratorService {
     private final ShortTermMemoryService shortTermMemoryService;
 
     public OrchestratorReply handle(String userId, String conversationId, String userInput) {
+        String traceId = "trace-" + UUID.randomUUID();
         messageArchiveService.archive(userId, conversationId, "user", userInput);
         SessionSnapshot snapshot = snapshotBuilder.build(userId, conversationId, null);
         IntentResult intent = intentRecognizer.recognize(userInput, snapshot);
         OrchestratorReply reply;
         if (intent.isNeedClarify()) {
+            String question = clarificationComposer.intentClarification();
             reply = OrchestratorReply.builder()
-                    .answer(clarificationComposer.intentClarification())
+                    .answer(question)
                     .intent(intent.getPrimaryIntent())
                     .needClarify(true)
+                    .clarifyQuestion(question)
                     .childCalls(0)
+                    .data(Map.of("reason", "LOW_CONFIDENCE_OR_AMBIGUOUS_INTENT"))
+                    .traceId(traceId)
                     .build();
         } else {
             reply = switch (intent.getPrimaryIntent()) {
-                case KNOWLEDGE -> handleKnowledge(userInput, snapshot, intent);
-                case TOOL -> handleShopping(snapshot, intent);
-                case SYSTEM -> handleSystem(userId, conversationId, intent);
+                case KNOWLEDGE -> handleKnowledge(userInput, snapshot, intent, traceId);
+                case SHOPPING -> handleShopping(snapshot, intent, traceId);
+                case SYSTEM -> handleSystem(userId, conversationId, intent, traceId);
             };
         }
         messageArchiveService.archive(userId, conversationId, "assistant", reply.getAnswer());
@@ -65,19 +74,23 @@ public class OrchestratorService {
         return reply;
     }
 
-    private OrchestratorReply handleKnowledge(String userInput, SessionSnapshot snapshot, IntentResult intent) {
+    private OrchestratorReply handleKnowledge(String userInput, SessionSnapshot snapshot, IntentResult intent, String traceId) {
         if (isHybridShoppingRequest(userInput)) {
             RetrievalLoopResult result = retrievalLoop.retrieve(userInput, intent.getSecondaryIntent(), snapshot, intent.getEntities());
+            String question = "如果你确认这款商品和规格，我再帮你加购。";
             String answer = result.isDegraded()
                     ? answerComposer.degraded()
-                    : answerComposer.compose(result.getResponse()) + "。如果你确认这款商品和规格，我再帮你加购。";
+                    : answerComposer.compose(result.getResponse()) + "。" + question;
             return OrchestratorReply.builder()
                     .answer(answer)
                     .intent(IntentResult.IntentType.KNOWLEDGE)
                     .needClarify(true)
+                    .clarifyQuestion(question)
                     .qualityLevel(result.getVerdict().getLevel())
                     .retryCount(result.getRetryCount())
                     .childCalls(result.getRetryCount() + 1)
+                    .data(knowledgeData(result))
+                    .traceId(traceId)
                     .build();
         }
         RetrievalLoopResult result = retrievalLoop.retrieve(userInput, intent.getSecondaryIntent(), snapshot, intent.getEntities());
@@ -86,13 +99,16 @@ public class OrchestratorService {
                 .answer(answer)
                 .intent(IntentResult.IntentType.KNOWLEDGE)
                 .needClarify(result.isDegraded())
+                .clarifyQuestion(result.isDegraded() ? answer : null)
                 .qualityLevel(result.getVerdict().getLevel())
                 .retryCount(result.getRetryCount())
                 .childCalls(result.getRetryCount() + 1)
+                .data(knowledgeData(result))
+                .traceId(traceId)
                 .build();
     }
 
-    private OrchestratorReply handleShopping(SessionSnapshot snapshot, IntentResult intent) {
+    private OrchestratorReply handleShopping(SessionSnapshot snapshot, IntentResult intent, String traceId) {
         ShoppingResponse response = shoppingGateway.invoke(ShoppingRequest.builder()
                 .action(toShoppingAction(intent.getSecondaryIntent()))
                 .slots(intent.getSlots() == null ? Map.of() : intent.getSlots())
@@ -104,17 +120,22 @@ public class OrchestratorService {
                 : shoppingReplyComposer.compose(response);
         return OrchestratorReply.builder()
                 .answer(answer)
-                .intent(IntentResult.IntentType.TOOL)
+                .intent(IntentResult.IntentType.SHOPPING)
                 .needClarify(needClarify)
+                .clarifyQuestion(needClarify ? answer : null)
                 .childCalls(1)
+                .data(shoppingData(response))
+                .traceId(traceId)
                 .build();
     }
 
-    private OrchestratorReply handleSystem(String userId, String conversationId, IntentResult intent) {
+    private OrchestratorReply handleSystem(String userId, String conversationId, IntentResult intent, String traceId) {
         return OrchestratorReply.builder()
                 .answer(systemCommandHandler.handle(userId, conversationId, intent.getSecondaryIntent()))
                 .intent(IntentResult.IntentType.SYSTEM)
                 .childCalls(0)
+                .data(Map.of("secondaryIntent", intent.getSecondaryIntent()))
+                .traceId(traceId)
                 .build();
     }
 
@@ -128,7 +149,57 @@ public class OrchestratorService {
         if ("库存查询".equals(secondaryIntent)) {
             return "query_stock";
         }
-        return "add_cart";
+        return "add_to_cart";
+    }
+
+    private Map<String, Object> knowledgeData(RetrievalLoopResult result) {
+        KnowledgeResponse response = result.getResponse();
+        if (response == null) {
+            return Map.of("references", List.of(), "degraded", result.isDegraded());
+        }
+        List<Map<String, Object>> references = response.getResults() == null ? List.of() : response.getResults().stream()
+                .map(item -> {
+                    Map<String, Object> reference = new LinkedHashMap<>();
+                    reference.put("sourceId", item.getSourceId());
+                    reference.put("content", item.getContent());
+                    reference.put("score", item.getScore());
+                    reference.put("hitType", item.getHitType());
+                    return reference;
+                })
+                .toList();
+        return Map.of(
+                "references", references,
+                "topScore", response.getTopScore(),
+                "hitEntities", response.getHitEntities() == null ? List.of() : response.getHitEntities(),
+                "recallCount", response.getRecallCount(),
+                "degraded", result.isDegraded()
+        );
+    }
+
+    private Map<String, Object> shoppingData(ShoppingResponse response) {
+        Map<String, Object> resultData = response.getResultData() == null ? Map.of() : response.getResultData();
+        String tool = String.valueOf(resultData.getOrDefault("tool", ""));
+        Object payload = switch (tool) {
+            case "add_to_cart" -> resultData;
+            case "place_order" -> resultData;
+            case "query_stock" -> resultData;
+            case "query_logistics" -> resultData;
+            default -> resultData;
+        };
+        String key = switch (tool) {
+            case "add_to_cart" -> "cart";
+            case "place_order" -> "order";
+            case "query_stock" -> "stock";
+            case "query_logistics" -> "logistics";
+            case "query_promotion" -> "promotion";
+            default -> "result";
+        };
+        return Map.of(
+                "status", response.getStatus(),
+                "tool", tool,
+                key, payload,
+                "missingSlots", response.getMissingSlots() == null ? List.of() : response.getMissingSlots()
+        );
     }
 
     private boolean isHybridShoppingRequest(String input) {
