@@ -42,15 +42,17 @@
 }
 
 html {
+  min-width: 320px;
   min-height: 100%;
   background: var(--color-background);
 }
 
 body {
   margin: 0;
+  min-width: 320px;
   min-height: 100dvh;
   isolation: isolate;
-  overflow-x: hidden;
+  overflow-x: auto;
   background:
     radial-gradient(circle at 50% 8%, rgba(34, 211, 238, 0.18), transparent 28rem),
     radial-gradient(circle at 8% 16%, rgba(255, 105, 0, 0.18), transparent 18rem),
@@ -119,6 +121,20 @@ button:disabled {
 @media (forced-colors: active) {
   :root {
     color-scheme: normal;
+    --color-background: Canvas;
+    --color-surface: Canvas;
+    --color-surface-strong: Canvas;
+    --color-foreground: CanvasText;
+    --color-muted: CanvasText;
+    --color-border: ButtonText;
+  }
+
+  body {
+    background: Canvas;
+  }
+
+  body::before {
+    display: none;
   }
 
   .app-scroll {
