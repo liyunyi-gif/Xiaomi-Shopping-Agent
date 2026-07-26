@@ -12,7 +12,7 @@
 - 测试步骤：
   1. 执行 schema 脚本。
   2. 查询 `pg_indexes` 中 `t_agent_trace` 的索引。
-- 预期结果：脚本执行成功；`idx_trace_id` 仅出现一次；同一 `trace_id` 允许对应多个节点记录。
+- 预期结果：脚本执行成功；`uk_trace_span(trace_id, span_id)` 仅定义一次并覆盖 trace 前缀查询；同一 `trace_id` 允许对应多个节点记录。
 - 对应需求/设计来源：`doc/database/数据库设计.md` trace 索引设计
 - 优先级：高
 - 用例类型：异常/边界

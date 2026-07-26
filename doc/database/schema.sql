@@ -362,7 +362,6 @@ CREATE TABLE t_agent_trace (
     span_id         VARCHAR(64) NOT NULL DEFAULT gen_random_uuid()::text,
     CONSTRAINT uk_trace_span UNIQUE (trace_id, span_id)
 );
-CREATE INDEX idx_trace_id ON t_agent_trace (trace_id);
 CREATE INDEX idx_trace_conv ON t_agent_trace (conversation_id);
 CREATE INDEX idx_trace_user ON t_agent_trace (user_id);
 COMMENT ON TABLE t_agent_trace IS 'Agent 执行链路表（意图/质量判断/重检/工具追踪）';
