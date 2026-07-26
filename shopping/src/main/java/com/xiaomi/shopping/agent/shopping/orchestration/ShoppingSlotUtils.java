@@ -16,12 +16,19 @@ public final class ShoppingSlotUtils {
     }
 
     public static String stringSlot(Map<String, Object> slots, String... names) {
-        Object value = first(slots, names);
-        if (value == null) {
+        if (slots == null || names == null) {
             return null;
         }
-        String text = String.valueOf(value).trim();
-        return text.isEmpty() ? null : text;
+        for (String name : names) {
+            if (!slots.containsKey(name) || slots.get(name) == null) {
+                continue;
+            }
+            String text = String.valueOf(slots.get(name)).trim();
+            if (!text.isEmpty()) {
+                return text;
+            }
+        }
+        return null;
     }
 
     public static Integer intSlot(Map<String, Object> slots, Integer defaultValue, String... names) {

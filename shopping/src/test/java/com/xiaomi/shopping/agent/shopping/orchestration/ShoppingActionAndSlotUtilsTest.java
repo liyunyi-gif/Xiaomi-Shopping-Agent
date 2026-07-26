@@ -53,4 +53,12 @@ class ShoppingActionAndSlotUtilsTest {
         assertEquals("ONLINE", ShoppingSlotUtils.stringSlot(slots, "payMethod", "paymentMethod"));
         assertEquals(1, ShoppingSlotUtils.intSlot(Map.of(), 1, "quantity", "qty"));
     }
+
+    @Test
+    @DisplayName("空白首选 SKU 回退到 skuId")
+    void shouldSkipBlankSlotAlias() {
+        Map<String, Object> slots = Map.of("skuCode", "  ", "skuId", "legacy-sku");
+
+        assertEquals("legacy-sku", ShoppingSlotUtils.stringSlot(slots, "skuCode", "skuId"));
+    }
 }

@@ -88,6 +88,19 @@ describe('parseShoppingState', () => {
     expect(result).toBeUndefined()
   })
 
+  it('falls back when a numeric field is an object', () => {
+    const result = parseShoppingState({
+      ...baseReply,
+      data: {
+        status: 'SUCCESS',
+        tool: 'query_stock',
+        stock: { skuCode: 'sku-14', stock: { value: 12 } },
+      },
+    })
+
+    expect(result?.fields?.stock).toBe('待同步')
+  })
+
   it('does not parse natural-language answer as authoritative state', () => {
     expect(parseShoppingState({ ...baseReply, answer: '已处理成功：{cartId=cart-1234, skuCode=sku-14}' })).toBeUndefined()
   })

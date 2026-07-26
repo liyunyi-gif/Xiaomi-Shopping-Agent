@@ -240,3 +240,25 @@
 - 对应需求/设计来源：`doc/购物Agent-技术架构.md` §5；`doc/接口文档.md` §9.3/§10.6
 - 优先级：高
 - 用例类型：正向
+
+## OCRFIX-020 槽位别名跳过空白首选值
+
+- 模块：ShoppingSlotUtils
+- 用例标题：skuCode 为空时回退到 skuId
+- 前置条件：slots 同时包含空白 `skuCode` 和有效 `skuId`
+- 测试步骤：调用 `stringSlot(slots, "skuCode", "skuId")`。
+- 预期结果：返回有效 `skuId`；不因首个键存在但为空而提前返回 null。
+- 对应需求/设计来源：`doc/购物Agent-技术架构.md` §5；CONTRACT-003
+- 优先级：中
+- 用例类型：边界
+
+## OCRFIX-021 数值字段拒绝对象和数组
+
+- 模块：前端 responseParser
+- 用例标题：库存/数量字段类型异常时使用回退值
+- 前置条件：stock 或 quantity 字段为对象/数组
+- 测试步骤：调用 `parseShoppingState` 并检查 fields。
+- 预期结果：不渲染 `[object Object]` 或数组拼接文本；使用定义的回退值。
+- 对应需求/设计来源：`doc/前端技术架构文档.md` §12.4
+- 优先级：低
+- 用例类型：异常/边界

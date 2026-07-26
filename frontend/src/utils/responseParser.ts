@@ -20,9 +20,8 @@ function text(value: unknown, fallback = ''): string {
 }
 
 function numberOrText(value: unknown, fallback: string | number): string | number {
-  if (typeof value === 'number') return value
-  if (value === null || value === undefined) return fallback
-  return String(value)
+  if (typeof value === 'number' || typeof value === 'string') return value
+  return fallback
 }
 
 export function parseShoppingState(reply: ChatReply): ParsedShoppingState | undefined {
