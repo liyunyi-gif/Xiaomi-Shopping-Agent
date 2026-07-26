@@ -350,3 +350,14 @@
 - 对应需求/设计来源：`doc/接口文档.md` §5；CONTRACT-002
 - 优先级：中
 - 用例类型：异常
+
+## OCRFIX-030 优惠查询结果清理旧购物状态
+
+- 模块：前端 responseParser / CartStatusCard
+- 用例标题：query_promotion 返回 promotion 状态卡片
+- 前置条件：`ChatReply.data.promotion` 包含 SKU 和优惠信息，且 status=SUCCESS
+- 测试步骤：调用 `parseShoppingState` 并观察购物状态卡片。
+- 预期结果：返回独立 promotion 状态；展示当前优惠结果；不保留上一轮购物车/订单/库存状态。
+- 对应需求/设计来源：`doc/接口文档.md` §10.6；`doc/购物Agent-技术架构.md` §5
+- 优先级：中
+- 用例类型：正向

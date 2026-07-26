@@ -101,6 +101,21 @@ describe('parseShoppingState', () => {
     expect(result?.fields?.stock).toBe('待同步')
   })
 
+  it('parses promotion results without keeping a stale state', () => {
+    const result = parseShoppingState({
+      ...baseReply,
+      data: {
+        status: 'SUCCESS',
+        tool: 'query_promotion',
+        promotion: { skuCode: 'sku-14', promotion: '暂无优惠' },
+      },
+    })
+
+    expect(result?.type).toBe('promotion')
+    expect(result?.fields?.skuCode).toBe('sku-14')
+    expect(result?.fields?.promotion).toBe('暂无优惠')
+  })
+
   it('does not parse natural-language answer as authoritative state', () => {
     expect(parseShoppingState({ ...baseReply, answer: '已处理成功：{cartId=cart-1234, skuCode=sku-14}' })).toBeUndefined()
   })

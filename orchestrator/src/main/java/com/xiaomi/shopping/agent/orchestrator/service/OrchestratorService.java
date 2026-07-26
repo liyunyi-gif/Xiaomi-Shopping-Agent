@@ -33,6 +33,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrchestratorService {
 
+    private static final Map<String, String> SHOPPING_ACTIONS = Map.of(
+            "加购", "add_to_cart",
+            "下单", "place_order",
+            "物流查询", "query_logistics",
+            "库存查询", "query_stock",
+            "促销咨询", "query_promotion"
+    );
+
     private final IntentRecognizer intentRecognizer;
     private final RetrievalLoop retrievalLoop;
     private final ShoppingGateway shoppingGateway;
@@ -158,22 +166,7 @@ public class OrchestratorService {
     }
 
     private String toShoppingAction(String secondaryIntent) {
-        if ("下单".equals(secondaryIntent)) {
-            return "place_order";
-        }
-        if ("物流查询".equals(secondaryIntent)) {
-            return "query_logistics";
-        }
-        if ("库存查询".equals(secondaryIntent)) {
-            return "query_stock";
-        }
-        if ("加购".equals(secondaryIntent)) {
-            return "add_to_cart";
-        }
-        if ("促销咨询".equals(secondaryIntent)) {
-            return "query_promotion";
-        }
-        return null;
+        return SHOPPING_ACTIONS.get(secondaryIntent);
     }
 
     private Map<String, Object> knowledgeData(RetrievalLoopResult result) {

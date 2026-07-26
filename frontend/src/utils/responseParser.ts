@@ -1,7 +1,7 @@
 import type { ChatReply } from '../api/types'
 
 export interface ParsedShoppingState {
-  type: 'empty' | 'added' | 'orderCreated' | 'logistics' | 'stock' | 'needClarify' | 'failed'
+  type: 'empty' | 'added' | 'orderCreated' | 'logistics' | 'stock' | 'promotion' | 'needClarify' | 'failed'
   title: string
   description: string
   fields?: Record<string, string | number>
@@ -97,6 +97,19 @@ export function parseShoppingState(reply: ChatReply): ParsedShoppingState | unde
       fields: {
         skuCode: text(stock.skuCode, '未知 SKU'),
         stock: numberOrText(stock.stock, '待同步'),
+      },
+    }
+  }
+
+  const promotion = asRecord(data.promotion)
+  if (promotion) {
+    return {
+      type: 'promotion',
+      title: '优惠信息',
+      description: text(promotion.promotion, '暂无优惠'),
+      fields: {
+        skuCode: text(promotion.skuCode, '未知 SKU'),
+        promotion: text(promotion.promotion, '暂无优惠'),
       },
     }
   }
