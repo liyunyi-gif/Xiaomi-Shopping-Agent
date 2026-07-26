@@ -6,7 +6,7 @@ interface PromptChipsProps {
 
 export function PromptChips({ onPick }: PromptChipsProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1" aria-label="快捷操作">
+    <div className="app-scroll flex gap-2 overflow-x-auto pb-1" aria-label="快捷操作">
       {quickPrompts.map(item => (
         <button
           key={item.id}

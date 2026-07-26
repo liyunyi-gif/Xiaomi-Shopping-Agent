@@ -109,12 +109,28 @@ public class OrchestratorService {
     }
 
     private OrchestratorReply handleShopping(SessionSnapshot snapshot, IntentResult intent, String traceId) {
+        String action = toShoppingAction(intent.getSecondaryIntent());
+        if (action == null) {
+            String question = clarificationComposer.intentClarification();
+            return OrchestratorReply.builder()
+                    .answer(question)
+                    .intent(IntentResult.IntentType.SHOPPING)
+                    .needClarify(true)
+                    .clarifyQuestion(question)
+                    .childCalls(0)
+                    .data(Map.of(
+                            "reason", "UNSUPPORTED_SHOPPING_ACTION",
+                            "secondaryIntent", String.valueOf(intent.getSecondaryIntent())
+                    ))
+                    .traceId(traceId)
+                    .build();
+        }
         ShoppingResponse response = shoppingGateway.invoke(ShoppingRequest.builder()
-                .action(toShoppingAction(intent.getSecondaryIntent()))
+                .action(action)
                 .slots(intent.getSlots() == null ? Map.of() : intent.getSlots())
                 .snapshot(snapshot)
                 .build());
-        boolean needClarify = response.getStatus() == ShoppingResponse.ExecStatus.NEED_CLARIFY;
+        boolean needClarify = response != null && response.getStatus() == ShoppingResponse.ExecStatus.NEED_CLARIFY;
         String answer = needClarify
                 ? clarificationComposer.missingSlots(response.getMissingSlots())
                 : shoppingReplyComposer.compose(response);
@@ -134,7 +150,7 @@ public class OrchestratorService {
                 .answer(systemCommandHandler.handle(userId, conversationId, intent.getSecondaryIntent()))
                 .intent(IntentResult.IntentType.SYSTEM)
                 .childCalls(0)
-                .data(Map.of("secondaryIntent", intent.getSecondaryIntent()))
+                .data(systemData(intent.getSecondaryIntent()))
                 .traceId(traceId)
                 .build();
     }
@@ -149,7 +165,10 @@ public class OrchestratorService {
         if ("库存查询".equals(secondaryIntent)) {
             return "query_stock";
         }
-        return "add_to_cart";
+        if ("加购".equals(secondaryIntent)) {
+            return "add_to_cart";
+        }
+        return null;
     }
 
     private Map<String, Object> knowledgeData(RetrievalLoopResult result) {
@@ -177,15 +196,12 @@ public class OrchestratorService {
     }
 
     private Map<String, Object> shoppingData(ShoppingResponse response) {
+        if (response == null) {
+            return Map.of("status", "FAILED", "reason", "EMPTY_SHOPPING_RESPONSE", "missingSlots", List.of());
+        }
         Map<String, Object> resultData = response.getResultData() == null ? Map.of() : response.getResultData();
-        String tool = String.valueOf(resultData.getOrDefault("tool", ""));
-        Object payload = switch (tool) {
-            case "add_to_cart" -> resultData;
-            case "place_order" -> resultData;
-            case "query_stock" -> resultData;
-            case "query_logistics" -> resultData;
-            default -> resultData;
-        };
+        Object rawTool = resultData.get("tool");
+        String tool = rawTool == null ? "" : String.valueOf(rawTool);
         String key = switch (tool) {
             case "add_to_cart" -> "cart";
             case "place_order" -> "order";
@@ -194,12 +210,18 @@ public class OrchestratorService {
             case "query_promotion" -> "promotion";
             default -> "result";
         };
-        return Map.of(
-                "status", response.getStatus(),
-                "tool", tool,
-                key, payload,
-                "missingSlots", response.getMissingSlots() == null ? List.of() : response.getMissingSlots()
-        );
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("status", response.getStatus());
+        data.put("tool", tool);
+        data.put(key, resultData);
+        data.put("missingSlots", response.getMissingSlots() == null ? List.of() : response.getMissingSlots());
+        return data;
+    }
+
+    private Map<String, Object> systemData(String secondaryIntent) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("secondaryIntent", secondaryIntent);
+        return data;
     }
 
     private boolean isHybridShoppingRequest(String input) {

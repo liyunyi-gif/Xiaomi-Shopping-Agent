@@ -2,11 +2,13 @@ package com.xiaomi.shopping.agent.orchestrator.service;
 
 import com.xiaomi.shopping.agent.common.contract.KnowledgeRequest;
 import com.xiaomi.shopping.agent.common.contract.KnowledgeResponse;
+import com.xiaomi.shopping.agent.common.contract.IntentResult;
 import com.xiaomi.shopping.agent.common.contract.ShoppingRequest;
 import com.xiaomi.shopping.agent.common.contract.ShoppingResponse;
 import com.xiaomi.shopping.agent.common.port.KnowledgeGateway;
 import com.xiaomi.shopping.agent.common.port.ShoppingGateway;
 import com.xiaomi.shopping.agent.orchestrator.entityextract.OrchestratorEntityExtractor;
+import com.xiaomi.shopping.agent.orchestrator.intent.IntentRecognizer;
 import com.xiaomi.shopping.agent.orchestrator.intent.RuleBasedIntentRecognizer;
 import com.xiaomi.shopping.agent.orchestrator.judge.QualityJudge;
 import com.xiaomi.shopping.agent.orchestrator.judge.RetrievalLoop;
@@ -28,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -89,13 +92,53 @@ class OrchestratorServiceTest {
         assertEquals(0, reply.getChildCalls());
     }
 
+    @Test
+    @DisplayName("未知购物动作不得默认降级为加购")
+    void shouldRejectUnsupportedShoppingActionWithoutChildCall() {
+        IntentRecognizer recognizer = (input, snapshot) -> IntentResult.builder()
+                .primaryIntent(IntentResult.IntentType.SHOPPING)
+                .secondaryIntent("unsupported-action")
+                .needClarify(false)
+                .entities(Set.of())
+                .slots(Map.of())
+                .build();
+        CountingShoppingGateway shopping = new CountingShoppingGateway(ShoppingResponse.ExecStatus.SUCCESS);
+        OrchestratorService service = service(recognizer, new CountingKnowledgeGateway(), shopping);
+
+        OrchestratorReply reply = service.handle("u1", "c1", "执行未知动作");
+
+        assertTrue(reply.isNeedClarify());
+        assertEquals("UNSUPPORTED_SHOPPING_ACTION", reply.getData().get("reason"));
+        assertEquals(0, shopping.calls);
+        assertEquals(0, reply.getChildCalls());
+    }
+
+    @Test
+    @DisplayName("Shopping 返回空状态时仍返回结构化降级响应")
+    void shouldHandleNullShoppingStatusWithoutException() {
+        CountingShoppingGateway shopping = new CountingShoppingGateway(null);
+        OrchestratorService service = service(new CountingKnowledgeGateway(), shopping);
+
+        OrchestratorReply reply = service.handle("u1", "c1", "帮我下单");
+
+        assertTrue(reply.getAnswer().contains("有效状态"));
+        assertNull(reply.getData().get("status"));
+        assertEquals(1, shopping.calls);
+    }
+
     private OrchestratorService service(KnowledgeGateway knowledgeGateway, ShoppingGateway shoppingGateway) {
+        return service(new RuleBasedIntentRecognizer(new OrchestratorEntityExtractor()), knowledgeGateway, shoppingGateway);
+    }
+
+    private OrchestratorService service(IntentRecognizer recognizer,
+                                        KnowledgeGateway knowledgeGateway,
+                                        ShoppingGateway shoppingGateway) {
         InMemoryShortTermMemoryService shortTerm = new InMemoryShortTermMemoryService(10);
         InMemoryLongTermMemoryService longTerm = new InMemoryLongTermMemoryService();
         InMemoryMessageArchiveService archive = new InMemoryMessageArchiveService();
         MemoryLoadService memoryLoadService = new MemoryLoadService(shortTerm, longTerm);
         return new OrchestratorService(
-                new RuleBasedIntentRecognizer(new OrchestratorEntityExtractor()),
+                recognizer,
                 new RetrievalLoop(knowledgeGateway, new QualityJudge(0.7), new RuleBasedLoopQueryRewriter(), 2),
                 shoppingGateway,
                 new SessionSnapshotBuilder(memoryLoadService),

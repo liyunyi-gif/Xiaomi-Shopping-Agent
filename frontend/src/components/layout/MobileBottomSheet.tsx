@@ -8,6 +8,12 @@ import { IconButton } from '../common/IconButton'
 import { ProductCard } from '../product/ProductCard'
 import { BackendStatusPanel } from '../status/BackendStatusPanel'
 
+const panelTitles = {
+  prompts: '推荐商品',
+  cart: '购物状态',
+  status: '后端状态',
+} as const
+
 export function MobileBottomSheet() {
   const panel = useUiStore(state => state.mobilePanel)
   const setPanel = useUiStore(state => state.setMobilePanel)
@@ -34,9 +40,9 @@ export function MobileBottomSheet() {
 
       {panel && (
         <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-labelledby="mobile-panel-title">
-          <div className="absolute inset-x-0 bottom-0 max-h-[78dvh] overflow-y-auto rounded-t-xl border border-ai-primary/25 bg-[#070a1a] p-4 pb-20 shadow-[0_0_40px_rgba(34,211,238,0.18)]">
+          <div className="app-scroll absolute inset-x-0 bottom-0 max-h-[78dvh] overflow-y-auto rounded-t-xl border border-ai-primary/25 bg-[#070a1a] p-4 pb-20 shadow-[0_0_40px_rgba(34,211,238,0.18)]">
             <div className="mb-3 flex items-center justify-between">
-              <h2 id="mobile-panel-title" className="font-heading text-lg font-bold text-foreground">{panel === 'prompts' ? '推荐商品' : panel === 'cart' ? '购物状态' : '后端状态'}</h2>
+              <h2 id="mobile-panel-title" className="font-heading text-lg font-bold text-foreground">{panelTitles[panel]}</h2>
               <IconButton label="关闭面板" onClick={() => setPanel(null)}>
                 <X size={18} aria-hidden="true" />
               </IconButton>

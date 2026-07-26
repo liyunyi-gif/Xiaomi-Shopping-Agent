@@ -35,6 +35,21 @@ describe('parseShoppingState', () => {
     expect(result?.type).toBe('needClarify')
   })
 
+  it('keeps stock result distinct from an empty shopping state', () => {
+    const result = parseShoppingState({
+      ...baseReply,
+      data: {
+        status: 'SUCCESS',
+        tool: 'query_stock',
+        stock: { skuCode: 'sku-14', stock: 12 },
+      },
+    })
+
+    expect(result?.type).toBe('stock')
+    expect(result?.fields?.skuCode).toBe('sku-14')
+    expect(result?.fields?.stock).toBe(12)
+  })
+
   it('does not parse natural-language answer as authoritative state', () => {
     expect(parseShoppingState({ ...baseReply, answer: '已处理成功：{cartId=cart-1234, skuCode=sku-14}' })).toBeUndefined()
   })

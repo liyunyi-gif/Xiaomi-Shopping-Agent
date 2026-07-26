@@ -50,6 +50,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100dvh;
+  isolation: isolate;
   overflow-x: hidden;
   background:
     radial-gradient(circle at 50% 8%, rgba(34, 211, 238, 0.18), transparent 28rem),
@@ -95,24 +96,35 @@ button:disabled {
   outline-offset: 3px;
 }
 
-* {
+.app-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(34, 211, 238, 0.5) rgba(13, 18, 42, 0.45);
 }
 
-*::-webkit-scrollbar {
+.app-scroll::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-*::-webkit-scrollbar-track {
+.app-scroll::-webkit-scrollbar-track {
   background: rgba(13, 18, 42, 0.45);
   border-radius: 999px;
 }
 
-*::-webkit-scrollbar-thumb {
+.app-scroll::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(34, 211, 238, 0.72), rgba(139, 92, 246, 0.58));
   border-radius: 999px;
+}
+
+@media (forced-colors: active) {
+  .app-scroll {
+    scrollbar-color: auto;
+  }
+
+  .app-scroll::-webkit-scrollbar-track,
+  .app-scroll::-webkit-scrollbar-thumb {
+    background: Canvas;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

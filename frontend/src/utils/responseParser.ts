@@ -1,7 +1,7 @@
 import type { ChatReply } from '../api/types'
 
 export interface ParsedShoppingState {
-  type: 'empty' | 'added' | 'orderCreated' | 'logistics' | 'needClarify' | 'failed'
+  type: 'empty' | 'added' | 'orderCreated' | 'logistics' | 'stock' | 'needClarify' | 'failed'
   title: string
   description: string
   fields?: Record<string, string | number>
@@ -88,7 +88,7 @@ export function parseShoppingState(reply: ChatReply): ParsedShoppingState | unde
   const stock = asRecord(data.stock)
   if (stock) {
     return {
-      type: 'empty',
+      type: 'stock',
       title: '库存状态',
       description: '已查询到库存信息。',
       fields: {

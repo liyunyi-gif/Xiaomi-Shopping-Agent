@@ -361,11 +361,9 @@ CREATE TABLE t_agent_trace (
     span_id         VARCHAR(64)
 );
 CREATE INDEX idx_trace_id ON t_agent_trace (trace_id);
-CREATE INDEX idx_trace_id ON t_agent_trace (trace_id);
 CREATE INDEX idx_trace_conv ON t_agent_trace (conversation_id);
 CREATE INDEX idx_trace_user ON t_agent_trace (user_id);
 COMMENT ON TABLE t_agent_trace IS 'Agent 执行链路表（意图/质量判断/重检/工具追踪）';
 COMMENT ON COLUMN t_agent_trace.node_type IS 'intent/judge/retrieve_rerank/tool/shopping';
 COMMENT ON COLUMN t_agent_trace.extra_data IS '扩展（三信号快照等）';
-COMMENT ON COLUMN t_agent_trace.span_id IS '节点/跨度 ID；同一 trace_id 下可有多条 span';
 COMMENT ON COLUMN t_agent_trace.span_id IS '节点/跨度 ID；同一 trace_id 下可有多条 span';

@@ -15,6 +15,9 @@ public class ShoppingReplyComposer {
         if (response == null) {
             return "购物操作没有返回结果，请稍后重试。";
         }
+        if (response.getStatus() == null) {
+            return "购物操作未返回有效状态，请稍后重试。";
+        }
         return switch (response.getStatus()) {
             case SUCCESS -> "已处理成功：" + response.getResultData();
             case NEED_CLARIFY -> "还需要补充信息：" + response.getMissingSlots();

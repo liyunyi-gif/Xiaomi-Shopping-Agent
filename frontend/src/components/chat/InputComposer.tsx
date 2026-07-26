@@ -10,13 +10,15 @@ interface InputComposerProps {
   onSend: () => void
 }
 
+function getPlaceholder(loading: boolean, needClarify: boolean): string {
+  if (loading) return '正在等待 Agent 回复...'
+  if (needClarify) return '请补充上面 Agent 追问的信息...'
+  return '问我商品参数、推荐手机，或让我帮你加购...'
+}
+
 export function InputComposer({ draft, loading, needClarify = false, onDraftChange, onSend }: InputComposerProps) {
   const canSend = draft.trim().length > 0 && !loading
-  const placeholder = loading
-    ? '正在等待 Agent 回复...'
-    : needClarify
-      ? '请补充上面 Agent 追问的信息...'
-      : '问我商品参数、推荐手机，或让我帮你加购...'
+  const placeholder = getPlaceholder(loading, needClarify)
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) {

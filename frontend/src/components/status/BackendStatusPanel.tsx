@@ -49,7 +49,7 @@ export function BackendStatusPanel() {
       </div>
 
       {expanded && (
-        <div id="backend-status-details" className="mt-4 max-h-72 space-y-4 overflow-y-auto pr-1">
+        <div id="backend-status-details" className="app-scroll mt-4 max-h-72 space-y-4 overflow-y-auto pr-1">
           {groups.map(([title, keys]) => (
             <div key={title}>
               <h4 className="mb-2 text-xs font-semibold text-muted">{title}</h4>

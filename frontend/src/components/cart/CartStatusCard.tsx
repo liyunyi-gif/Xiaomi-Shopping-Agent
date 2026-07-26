@@ -26,6 +26,7 @@ export function CartStatusCard() {
     added: 'border-success/40 bg-success/12',
     orderCreated: 'border-success/40 bg-success/12',
     logistics: 'border-ai-primary/40 bg-ai-primary/12',
+    stock: 'border-ai-primary/40 bg-ai-primary/12',
     needClarify: 'border-warning/45 bg-warning/12',
     failed: 'border-danger/45 bg-danger/12',
   }[shoppingState.type]
