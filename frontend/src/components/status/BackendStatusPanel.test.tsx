@@ -70,4 +70,18 @@ describe('BackendStatusPanel', () => {
 
     expect(refresh).toHaveBeenCalledTimes(1)
   })
+
+  it('uses unique details ids for multiple panel instances', () => {
+    render(
+      <>
+        <BackendStatusPanel />
+        <BackendStatusPanel />
+      </>,
+    )
+
+    const toggles = screen.getAllByRole('button', { name: /查看服务状态/ })
+    expect(toggles[0]).toHaveAttribute('aria-controls')
+    expect(toggles[1]).toHaveAttribute('aria-controls')
+    expect(toggles[0].getAttribute('aria-controls')).not.toBe(toggles[1].getAttribute('aria-controls'))
+  })
 })

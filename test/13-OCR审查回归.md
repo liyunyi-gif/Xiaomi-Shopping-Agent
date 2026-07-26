@@ -284,3 +284,25 @@
 - 对应需求/设计来源：`doc/接口文档.md` §5；`test/08-契约DTO与架构约束.md` CONTRACT-011
 - 优先级：中
 - 用例类型：异常
+
+## OCRFIX-024 多状态面板实例的 ID 唯一
+
+- 模块：前端 BackendStatusPanel / 无障碍
+- 用例标题：桌面和移动端同时挂载时 aria-controls 不重复
+- 前置条件：RightPanel 与 MobileBottomSheet 同时渲染 BackendStatusPanel
+- 测试步骤：检查两个展开按钮和详情区域的 id/aria-controls。
+- 预期结果：每个实例拥有唯一 details id；每个按钮只控制对应详情区域。
+- 对应需求/设计来源：`doc/前端技术架构文档.md` §10.2；无障碍规范
+- 优先级：中
+- 用例类型：边界
+
+## OCRFIX-025 强制颜色模式滚动条保持对比
+
+- 模块：前端全局样式 / 无障碍
+- 用例标题：forced-colors 下滑块与轨道可区分
+- 前置条件：启用 `forced-colors: active`
+- 测试步骤：检查应用滚动容器的 track 和 thumb 颜色。
+- 预期结果：轨道使用 Canvas，滑块使用 ButtonText 或浏览器原生高对比样式，不出现同色不可见。
+- 对应需求/设计来源：FEUX-014；前端技术架构文档 §7.3
+- 优先级：中
+- 用例类型：边界

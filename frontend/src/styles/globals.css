@@ -122,9 +122,12 @@ button:disabled {
     scrollbar-color: auto;
   }
 
-  .app-scroll::-webkit-scrollbar-track,
-  .app-scroll::-webkit-scrollbar-thumb {
+  .app-scroll::-webkit-scrollbar-track {
     background: Canvas;
+  }
+
+  .app-scroll::-webkit-scrollbar-thumb {
+    background: ButtonText;
   }
 }
 

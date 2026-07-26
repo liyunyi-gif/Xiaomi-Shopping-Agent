@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { ChevronDown, RefreshCw } from 'lucide-react'
 import { useUiStore } from '../../stores/uiStore'
 import { useStatusStore } from '../../stores/statusStore'
@@ -22,6 +22,7 @@ export function BackendStatusPanel() {
   const refresh = useStatusStore(state => state.refresh)
   const expanded = useUiStore(state => state.rightPanelExpanded)
   const toggleExpanded = useUiStore(state => state.toggleRightPanel)
+  const detailsId = useId()
 
   useEffect(() => {
     void refresh()
@@ -36,7 +37,7 @@ export function BackendStatusPanel() {
           <p className="text-sm text-muted">{error ? error.message : readySummary(ready)}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={toggleExpanded} aria-expanded={expanded} aria-controls="backend-status-details">
+          <Button variant="ghost" size="sm" onClick={toggleExpanded} aria-expanded={expanded} aria-controls={detailsId}>
             <ChevronDown size={16} className={`transition ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
             {expanded ? '隐藏服务状态' : '查看服务状态'}
           </Button>
@@ -54,7 +55,7 @@ export function BackendStatusPanel() {
       </div>
 
       {expanded && (
-        <div id="backend-status-details" className="app-scroll mt-4 max-h-72 space-y-4 overflow-y-auto pr-1">
+        <div id={detailsId} className="app-scroll mt-4 max-h-72 space-y-4 overflow-y-auto pr-1">
           {groups.map(([title, keys]) => (
             <div key={title}>
               <h4 className="mb-2 text-xs font-semibold text-muted">{title}</h4>
