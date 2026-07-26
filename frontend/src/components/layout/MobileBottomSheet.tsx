@@ -26,7 +26,7 @@ export function MobileBottomSheet() {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-ai-primary/25 bg-[#070a1a]/88 p-2 backdrop-blur-xl lg:hidden" aria-label="移动端快捷面板">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-ai-primary/25 bg-[#070a1a]/88 p-2 backdrop-blur-xl xl:hidden" aria-label="移动端快捷面板">
         <button className="min-h-11 rounded-md text-sm text-foreground transition hover:bg-ai-primary/10" onClick={() => setPanel('prompts')} aria-expanded={panel === 'prompts'}>
           <PackageSearch className="mx-auto" size={18} aria-hidden="true" />推荐
         </button>
@@ -39,7 +39,7 @@ export function MobileBottomSheet() {
       </nav>
 
       {panel && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" role="dialog" aria-modal="true" aria-labelledby="mobile-panel-title">
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm xl:hidden" role="dialog" aria-modal="true" aria-labelledby="mobile-panel-title">
           <div className="app-scroll absolute inset-x-0 bottom-0 max-h-[78dvh] overflow-y-auto rounded-t-xl border border-ai-primary/25 bg-[#070a1a] p-4 pb-20 shadow-[0_0_40px_rgba(34,211,238,0.18)]">
             <div className="mb-3 flex items-center justify-between">
               <h2 id="mobile-panel-title" className="font-heading text-lg font-bold text-foreground">{panelTitles[panel]}</h2>
