@@ -150,7 +150,7 @@ public class OrchestratorService {
                 .needClarify(needClarify)
                 .clarifyQuestion(needClarify ? answer : null)
                 .childCalls(1)
-                .data(shoppingData(response))
+                .data(shoppingData(action, response))
                 .traceId(traceId)
                 .build();
     }
@@ -194,13 +194,12 @@ public class OrchestratorService {
         );
     }
 
-    private Map<String, Object> shoppingData(ShoppingResponse response) {
+    private Map<String, Object> shoppingData(String action, ShoppingResponse response) {
         if (response == null) {
             return Map.of("status", "FAILED", "reason", "EMPTY_SHOPPING_RESPONSE", "missingSlots", List.of());
         }
         Map<String, Object> resultData = response.getResultData() == null ? Map.of() : response.getResultData();
-        Object rawTool = resultData.get("tool");
-        String tool = rawTool == null ? "" : String.valueOf(rawTool);
+        String tool = action == null ? "" : action;
         String key = switch (tool) {
             case "add_to_cart" -> "cart";
             case "place_order" -> "order";

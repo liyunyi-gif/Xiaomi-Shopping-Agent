@@ -157,6 +157,19 @@ class OrchestratorServiceTest {
         assertEquals(1, shopping.calls);
     }
 
+    @Test
+    @DisplayName("MCP 结果无 tool 字段时按 action 归类")
+    void shouldClassifyShoppingDataByAction() {
+        CountingShoppingGateway shopping = new CountingShoppingGateway(ShoppingResponse.ExecStatus.SUCCESS);
+        OrchestratorService service = service(new CountingKnowledgeGateway(), shopping);
+
+        OrchestratorReply reply = service.handle("u1", "c1", "帮我下单");
+
+        assertEquals("place_order", reply.getData().get("tool"));
+        assertTrue(reply.getData().containsKey("order"));
+        assertEquals("cart-001", ((Map<?, ?>) reply.getData().get("order")).get("cartId"));
+    }
+
     private OrchestratorService service(KnowledgeGateway knowledgeGateway, ShoppingGateway shoppingGateway) {
         return service(new RuleBasedIntentRecognizer(new OrchestratorEntityExtractor()), knowledgeGateway, shoppingGateway);
     }

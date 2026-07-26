@@ -383,3 +383,14 @@
 - 对应需求/设计来源：FEUX-005/FEUX-014；前端UIUX设计文档 §10.2
 - 优先级：高
 - 用例类型：边界
+
+## OCRFIX-033 MCP 结果按 action 归类
+
+- 模块：Orchestrator shoppingData / MCP Gateway
+- 用例标题：MCP 返回无 tool 字段时仍渲染正确业务卡片
+- 前置条件：Shopping action 已确定为 add_to_cart/place_order/query_stock/query_logistics/query_promotion；MCP resultData 仅含业务字段
+- 测试步骤：执行 Shopping 请求并检查 ChatReply.data。
+- 预期结果：后端使用 action 填充 cart/order/stock/logistics/promotion 对应键；前端状态卡片可正常解析，不落入 data.result。
+- 对应需求/设计来源：`doc/接口文档.md` §5/§10；`doc/购物Agent-技术架构.md` §5
+- 优先级：高
+- 用例类型：异常
