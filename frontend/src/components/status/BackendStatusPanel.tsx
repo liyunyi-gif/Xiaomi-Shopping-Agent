@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { ChevronDown, RefreshCw } from 'lucide-react'
 import { useUiStore } from '../../stores/uiStore'
 import { useStatusStore } from '../../stores/statusStore'
@@ -22,6 +23,10 @@ export function BackendStatusPanel() {
   const expanded = useUiStore(state => state.rightPanelExpanded)
   const toggleExpanded = useUiStore(state => state.toggleRightPanel)
 
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3">
@@ -43,8 +48,8 @@ export function BackendStatusPanel() {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <StatusChip value={ready?.status} label="Ready主信号" />
-        <StatusChip value={health?.status} label="Health存活" />
+        <StatusChip value={ready?.status} label="就绪状态" />
+        <StatusChip value={health?.status} label="健康状态" />
         {lastRefreshedAt && <span className="text-xs text-muted">刷新于 {new Date(lastRefreshedAt).toLocaleTimeString()}</span>}
       </div>
 

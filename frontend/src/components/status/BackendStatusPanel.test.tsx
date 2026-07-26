@@ -36,8 +36,8 @@ describe('BackendStatusPanel', () => {
   it('renders health and aggregate ready status without relying on colors only', () => {
     render(<BackendStatusPanel />)
 
-    expect(screen.getByText('Ready主信号: 降级')).toBeInTheDocument()
-    expect(screen.getByText('Health存活: 正常')).toBeInTheDocument()
+    expect(screen.getByText('就绪状态: 降级')).toBeInTheDocument()
+    expect(screen.getByText('健康状态: 正常')).toBeInTheDocument()
     expect(screen.getByText('部分能力降级运行')).toBeInTheDocument()
   })
 
@@ -58,8 +58,15 @@ describe('BackendStatusPanel', () => {
 
   it('refreshes status manually', async () => {
     render(<BackendStatusPanel />)
+    refresh.mockClear()
 
     await userEvent.click(screen.getByRole('button', { name: /刷新后端状态/ }))
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshes status when mounted', () => {
+    render(<BackendStatusPanel />)
 
     expect(refresh).toHaveBeenCalledTimes(1)
   })

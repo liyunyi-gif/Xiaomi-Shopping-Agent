@@ -35,6 +35,18 @@ describe('parseShoppingState', () => {
     expect(result?.type).toBe('needClarify')
   })
 
+  it('parses clarification without structured data', () => {
+    const result = parseShoppingState({
+      answer: '请补充商品规格',
+      intent: 'SHOPPING',
+      needClarify: true,
+      clarifyQuestion: '请补充商品规格',
+    })
+
+    expect(result?.type).toBe('needClarify')
+    expect(result?.description).toBe('请补充商品规格')
+  })
+
   it('keeps stock result distinct from an empty shopping state', () => {
     const result = parseShoppingState({
       ...baseReply,
@@ -48,6 +60,20 @@ describe('parseShoppingState', () => {
     expect(result?.type).toBe('stock')
     expect(result?.fields?.skuCode).toBe('sku-14')
     expect(result?.fields?.stock).toBe(12)
+  })
+
+  it('falls back when a structured display field is an object', () => {
+    const result = parseShoppingState({
+      ...baseReply,
+      data: {
+        status: 'SUCCESS',
+        tool: 'add_to_cart',
+        cart: { cartId: {}, skuCode: ['sku-14'], spec: '16GB+512GB', quantity: 1 },
+      },
+    })
+
+    expect(result?.fields?.cartId).toBe('已生成')
+    expect(result?.fields?.skuCode).toBe('未知 SKU')
   })
 
   it('does not parse natural-language answer as authoritative state', () => {

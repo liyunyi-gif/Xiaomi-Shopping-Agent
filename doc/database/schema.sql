@@ -358,7 +358,8 @@ CREATE TABLE t_agent_trace (
     created_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted         SMALLINT    NOT NULL DEFAULT 0,
-    span_id         VARCHAR(64)
+    span_id         VARCHAR(64) NOT NULL,
+    CONSTRAINT uk_trace_span UNIQUE (trace_id, span_id)
 );
 CREATE INDEX idx_trace_id ON t_agent_trace (trace_id);
 CREATE INDEX idx_trace_conv ON t_agent_trace (conversation_id);

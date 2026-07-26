@@ -13,8 +13,10 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 }
 
 function text(value: unknown, fallback = ''): string {
-  if (value === null || value === undefined) return fallback
-  return String(value)
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+  return fallback
 }
 
 function numberOrText(value: unknown, fallback: string | number): string | number {
@@ -25,7 +27,6 @@ function numberOrText(value: unknown, fallback: string | number): string | numbe
 
 export function parseShoppingState(reply: ChatReply): ParsedShoppingState | undefined {
   const data = asRecord(reply.data)
-  if (!data) return undefined
 
   if (reply.needClarify) {
     return {
@@ -35,13 +36,15 @@ export function parseShoppingState(reply: ChatReply): ParsedShoppingState | unde
     }
   }
 
-  if (data.status === 'FAILED') {
+  if (data?.status === 'FAILED') {
     return {
       type: 'failed',
       title: '操作失败',
       description: reply.answer,
     }
   }
+
+  if (!data) return undefined
 
   const cart = asRecord(data.cart)
   if (cart) {

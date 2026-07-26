@@ -86,12 +86,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
           traceId: reply.traceId,
         },
       }
+      const parsedShoppingState = parseShoppingState(reply)
 
       set(state => ({
         messages: [...state.messages, assistantMessage],
         loading: false,
         lastReply: reply,
-        shoppingState: parseShoppingState(reply) ?? state.shoppingState,
+        shoppingState: parsedShoppingState ?? (reply.needClarify ? undefined : state.shoppingState),
       }))
     } catch (error) {
       const apiError = error as ApiError
