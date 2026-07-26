@@ -9,6 +9,7 @@
 -- 启用扩展
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================================
 -- 模块 1: 用户与会话域
@@ -358,7 +359,7 @@ CREATE TABLE t_agent_trace (
     created_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted         SMALLINT    NOT NULL DEFAULT 0,
-    span_id         VARCHAR(64) NOT NULL,
+    span_id         VARCHAR(64) NOT NULL DEFAULT gen_random_uuid()::text,
     CONSTRAINT uk_trace_span UNIQUE (trace_id, span_id)
 );
 CREATE INDEX idx_trace_id ON t_agent_trace (trace_id);

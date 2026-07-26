@@ -126,6 +126,25 @@ class OrchestratorServiceTest {
         assertEquals(1, shopping.calls);
     }
 
+    @Test
+    @DisplayName("促销咨询路由到 query_promotion")
+    void shouldRoutePromotionIntentToPromotionTool() {
+        IntentRecognizer recognizer = (input, snapshot) -> IntentResult.builder()
+                .primaryIntent(IntentResult.IntentType.SHOPPING)
+                .secondaryIntent("促销咨询")
+                .needClarify(false)
+                .entities(Set.of())
+                .slots(Map.of())
+                .build();
+        CountingShoppingGateway shopping = new CountingShoppingGateway(ShoppingResponse.ExecStatus.SUCCESS);
+        OrchestratorService service = service(recognizer, new CountingKnowledgeGateway(), shopping);
+
+        service.handle("u1", "c1", "查询优惠");
+
+        assertEquals("query_promotion", shopping.lastAction);
+        assertEquals(1, shopping.calls);
+    }
+
     private OrchestratorService service(KnowledgeGateway knowledgeGateway, ShoppingGateway shoppingGateway) {
         return service(new RuleBasedIntentRecognizer(new OrchestratorEntityExtractor()), knowledgeGateway, shoppingGateway);
     }
@@ -174,6 +193,7 @@ class OrchestratorServiceTest {
     private static class CountingShoppingGateway implements ShoppingGateway {
         private final ShoppingResponse.ExecStatus status;
         private int calls;
+        private String lastAction;
 
         private CountingShoppingGateway(ShoppingResponse.ExecStatus status) {
             this.status = status;
@@ -182,6 +202,7 @@ class OrchestratorServiceTest {
         @Override
         public ShoppingResponse invoke(ShoppingRequest request) {
             calls++;
+            lastAction = request.getAction();
             if (status == ShoppingResponse.ExecStatus.NEED_CLARIFY) {
                 return ShoppingResponse.builder()
                         .status(status)

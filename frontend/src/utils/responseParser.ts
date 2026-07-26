@@ -45,6 +45,7 @@ export function parseShoppingState(reply: ChatReply): ParsedShoppingState | unde
   }
 
   if (!data) return undefined
+  if (data.status !== 'SUCCESS') return undefined
 
   const cart = asRecord(data.cart)
   if (cart) {

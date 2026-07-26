@@ -168,6 +168,9 @@ public class OrchestratorService {
         if ("加购".equals(secondaryIntent)) {
             return "add_to_cart";
         }
+        if ("促销咨询".equals(secondaryIntent)) {
+            return "query_promotion";
+        }
         return null;
     }
 

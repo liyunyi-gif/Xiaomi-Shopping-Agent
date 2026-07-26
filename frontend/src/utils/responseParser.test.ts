@@ -76,6 +76,18 @@ describe('parseShoppingState', () => {
     expect(result?.fields?.skuCode).toBe('未知 SKU')
   })
 
+  it('does not render a success card for a non-success payload', () => {
+    const result = parseShoppingState({
+      ...baseReply,
+      data: {
+        status: 'NEED_CLARIFY',
+        cart: { cartId: 'stale-cart', skuCode: 'sku-14' },
+      },
+    })
+
+    expect(result).toBeUndefined()
+  })
+
   it('does not parse natural-language answer as authoritative state', () => {
     expect(parseShoppingState({ ...baseReply, answer: '已处理成功：{cartId=cart-1234, skuCode=sku-14}' })).toBeUndefined()
   })

@@ -207,3 +207,36 @@
 - 对应需求/设计来源：`doc/前端UIUX需求文档.md` §5.2/§5.3；FEUX-002/FEUX-013
 - 优先级：高
 - 用例类型：边界
+
+## OCRFIX-017 Trace span_id 缺省时自动生成
+
+- 模块：数据库 trace schema
+- 用例标题：应用未显式传入 span_id 时仍可插入链路记录
+- 前置条件：执行 schema 后，仅填写 trace_id 和其他必填字段插入 t_agent_trace
+- 测试步骤：执行插入并查询生成的 span_id。
+- 预期结果：插入成功；数据库自动生成非空 span_id；同一 trace 的不同记录仍保持组合唯一。
+- 对应需求/设计来源：`doc/database/数据库设计.md` trace 设计；`doc/database/schema.sql`
+- 优先级：高
+- 用例类型：边界
+
+## OCRFIX-018 非成功响应不渲染成功业务卡片
+
+- 模块：前端 responseParser
+- 用例标题：NEED_CLARIFY/FAILED 响应中的残留 payload 不得被当作成功
+- 前置条件：响应 data 同时包含非 SUCCESS status 和 cart/order/stock payload
+- 测试步骤：调用 `parseShoppingState`。
+- 预期结果：仅返回澄清/失败状态或 undefined；不返回 added/orderCreated/logistics/stock 成功卡片。
+- 对应需求/设计来源：`doc/接口文档.md` §5.8；`doc/前端技术架构文档.md` §12.4
+- 优先级：中
+- 用例类型：异常
+
+## OCRFIX-019 优惠查询动作完整路由
+
+- 模块：Orchestrator Shopping action
+- 用例标题：促销咨询路由到 query_promotion
+- 前置条件：`secondaryIntent=促销咨询`
+- 测试步骤：调用 Orchestrator 并检查传给 ShoppingGateway 的 action。
+- 预期结果：action 为 `query_promotion`；调用一次 ShoppingGateway；不返回 unsupported action。
+- 对应需求/设计来源：`doc/购物Agent-技术架构.md` §5；`doc/接口文档.md` §9.3/§10.6
+- 优先级：高
+- 用例类型：正向
