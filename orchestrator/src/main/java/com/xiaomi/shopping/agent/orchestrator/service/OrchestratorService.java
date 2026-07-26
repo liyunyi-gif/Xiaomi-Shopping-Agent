@@ -182,6 +182,7 @@ public class OrchestratorService {
             return Map.of("references", List.of(), "degraded", result.isDegraded());
         }
         List<Map<String, Object>> references = response.getResults() == null ? List.of() : response.getResults().stream()
+                .filter(item -> item != null)
                 .map(item -> {
                     Map<String, Object> reference = new LinkedHashMap<>();
                     reference.put("sourceId", item.getSourceId());

@@ -13,7 +13,7 @@ export function ChatPanel() {
   const sendMessage = useChatStore(state => state.sendMessage)
 
   return (
-    <Card className="relative flex min-h-[72dvh] flex-col overflow-hidden border-ai-primary/35 p-4 shadow-[0_0_46px_rgba(34,211,238,0.16),inset_0_1px_0_rgba(255,255,255,0.06)] lg:h-full lg:min-h-0">
+    <Card className="relative flex min-h-[72dvh] flex-col overflow-hidden border-ai-primary/35 p-4 shadow-[0_0_46px_rgba(34,211,238,0.16),inset_0_1px_0_rgba(255,255,255,0.06)] xl:h-full xl:min-h-0">
       <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-ai-primary to-transparent" />
       <header className="shrink-0 border-b border-border pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">

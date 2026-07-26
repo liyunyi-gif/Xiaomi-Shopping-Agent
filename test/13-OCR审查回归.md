@@ -306,3 +306,47 @@
 - 对应需求/设计来源：FEUX-014；前端技术架构文档 §7.3
 - 优先级：中
 - 用例类型：边界
+
+## OCRFIX-026 1024px 聊天区高度约束一致
+
+- 模块：前端 ChatPanel / AppShell
+- 用例标题：lg 到 xl 区间聊天消息区保持可用高度
+- 前置条件：视口宽度为 1024–1279px，页面已加载多条消息
+- 测试步骤：检查 ChatPanel 高度和 MessageList 滚动区域。
+- 预期结果：不依赖不存在的父级百分比高度；聊天区保留 viewport 最小高度，消息列表可滚动。
+- 对应需求/设计来源：`doc/前端技术架构文档.md` §7.3/§11.2；FEUX-013
+- 优先级：高
+- 用例类型：边界
+
+## OCRFIX-027 窄屏不被全局最小宽度裁剪
+
+- 模块：前端全局布局
+- 用例标题：320px 以下视口内容可重排或滚动访问
+- 前置条件：视口宽度小于 320px 或浏览器缩放后有效宽度小于 320px
+- 测试步骤：检查页面正文、输入框和发送按钮。
+- 预期结果：不因 html/body 固定最小宽度和 overflow-x hidden 裁剪关键操作。
+- 对应需求/设计来源：`doc/前端UIUX需求文档.md` §5.3/§10；FEUX-003
+- 优先级：中
+- 用例类型：边界
+
+## OCRFIX-028 深色原生控件与主题一致
+
+- 模块：前端全局主题 / 无障碍
+- 用例标题：原生 textarea 等控件遵循 dark color scheme
+- 前置条件：普通深色模式和 forced-colors 模式
+- 测试步骤：检查根 color-scheme 与输入控件渲染。
+- 预期结果：普通模式使用 dark；forced-colors 模式恢复系统颜色，不产生混合浅色控件。
+- 对应需求/设计来源：前端UIUX设计文档 §3.1；FEUX-005/FEUX-014
+- 优先级：中
+- 用例类型：边界
+
+## OCRFIX-029 Knowledge null 结果可降级
+
+- 模块：Orchestrator Knowledge 结构化 data
+- 用例标题：results 列表中的 null 元素不导致回复失败
+- 前置条件：KnowledgeResponse.results 含 null 元素
+- 测试步骤：执行知识问答并构造 ChatReply data。
+- 预期结果：忽略 null 元素并返回其余引用/降级结果；不抛出 NullPointerException。
+- 对应需求/设计来源：`doc/接口文档.md` §5；CONTRACT-002
+- 优先级：中
+- 用例类型：异常
