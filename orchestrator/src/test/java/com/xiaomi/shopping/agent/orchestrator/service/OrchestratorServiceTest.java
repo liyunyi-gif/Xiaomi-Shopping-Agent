@@ -127,6 +127,18 @@ class OrchestratorServiceTest {
     }
 
     @Test
+    @DisplayName("Shopping Gateway 返回 null 时安全降级")
+    void shouldHandleEmptyShoppingResponseWithoutException() {
+        ShoppingGateway shopping = request -> null;
+        OrchestratorService service = service(new CountingKnowledgeGateway(), shopping);
+
+        OrchestratorReply reply = service.handle("u1", "c1", "帮我下单");
+
+        assertTrue(reply.getAnswer().contains("没有返回结果"));
+        assertEquals("EMPTY_SHOPPING_RESPONSE", reply.getData().get("reason"));
+    }
+
+    @Test
     @DisplayName("促销咨询路由到 query_promotion")
     void shouldRoutePromotionIntentToPromotionTool() {
         IntentRecognizer recognizer = (input, snapshot) -> IntentResult.builder()

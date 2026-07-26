@@ -262,3 +262,25 @@
 - 对应需求/设计来源：`doc/前端技术架构文档.md` §12.4
 - 优先级：低
 - 用例类型：异常/边界
+
+## OCRFIX-022 背景遮罩兼容 Safari
+
+- 模块：前端全局样式
+- 用例标题：网格背景在 WebKit 浏览器保持渐变淡出
+- 前置条件：Safari 或支持 WebKit 前缀的浏览器
+- 测试步骤：打开页面并检查 body 网格背景。
+- 预期结果：使用 `-webkit-mask-image` 或安全 fallback；背景不会覆盖全屏造成视觉噪声。
+- 对应需求/设计来源：`doc/前端UIUX设计文档.md` §3.1
+- 优先级：低
+- 用例类型：边界
+
+## OCRFIX-023 空 ShoppingGateway 响应安全降级
+
+- 模块：Orchestrator Shopping 响应编排
+- 用例标题：Gateway 返回 null 时不抛出异常
+- 前置条件：ShoppingGateway 返回 null
+- 测试步骤：执行购物请求并检查 ChatReply。
+- 预期结果：返回可读的失败提示和结构化降级数据；不访问 null response 的字段。
+- 对应需求/设计来源：`doc/接口文档.md` §5；`test/08-契约DTO与架构约束.md` CONTRACT-011
+- 优先级：中
+- 用例类型：异常

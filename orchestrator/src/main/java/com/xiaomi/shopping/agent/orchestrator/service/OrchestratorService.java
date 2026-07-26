@@ -131,7 +131,9 @@ public class OrchestratorService {
                 .snapshot(snapshot)
                 .build());
         boolean needClarify = response != null && response.getStatus() == ShoppingResponse.ExecStatus.NEED_CLARIFY;
-        String answer = needClarify
+        String answer = response == null
+                ? shoppingReplyComposer.compose(null)
+                : needClarify
                 ? clarificationComposer.missingSlots(response.getMissingSlots())
                 : shoppingReplyComposer.compose(response);
         return OrchestratorReply.builder()
